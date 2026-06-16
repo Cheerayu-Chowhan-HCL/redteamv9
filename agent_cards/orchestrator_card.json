@@ -1,0 +1,4 @@
+{
+  "payload": "{\"agent_type\":\"orchestrator\",\"capabilities\":[\"create_session\",\"read_skill\",\"retrieve_knowledge\",\"get_cross_session_insights\",\"score_branches\",\"set_branch\",\"declare_intent\",\"get_intent_incidents\",\"select_skills\",\"distill_knowledge\",\"log_reasoning\",\"generate_report\",\"kill_all_scans\",\"get_session_context\"],\"description\":\"Top-level engagement controller. Reads skills, creates sessions, routes phases.\",\"id\":\"21409fdc-afc5-4d97-aeb6-3499f3b196b6\",\"issued_at\":\"2026-06-16T11:02:40.462622Z\",\"org\":\"hcltech-redteam-v9\",\"version\":\"9.0.0\"}",
+  "signature": "f9e98f29c87ad2e237224e5e3f8b27b8a821109bce95ff312f963c936b819e30"
+}

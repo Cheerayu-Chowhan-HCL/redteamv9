@@ -1,0 +1,4 @@
+{
+  "payload": "{\"agent_type\":\"planner\",\"capabilities\":[\"score_branches\",\"set_branch\",\"declare_intent\",\"get_intent_incidents\",\"select_skills\",\"log_reasoning\",\"get_session_context\",\"get_cross_session_insights\",\"add_injection_point\"],\"description\":\"BayesianMCTS attack planner. Scores branches and selects next attack vector.\",\"id\":\"2b4b9780-713e-44a7-a045-a96cfd16ce6f\",\"issued_at\":\"2026-06-16T11:02:40.482536Z\",\"org\":\"hcltech-redteam-v9\",\"version\":\"9.0.0\"}",
+  "signature": "715800486f496fe9250986a946b5c0d4ae3c3c797f74593af0621d4061e91712"
+}

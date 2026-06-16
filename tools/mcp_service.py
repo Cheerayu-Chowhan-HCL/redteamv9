@@ -627,6 +627,99 @@ def get_intent_incidents(session_id: str, severity: str = "") -> dict:
         return _err(str(e))
 
 
+@mcp.tool()
+def select_skills(session_id: str, phase: str,
+                  tech_stack: str = "") -> dict:
+    """SkillDAG dynamic skill selection — Phase 3.
+    Returns the relevant skill subgraph for the current phase
+    and tech stack. Replaces static read_skill() for adaptive
+    methodology selection.
+    phase: recon|sqli|xss|auth|idor|config|report
+    tech_stack: comma-separated fingerprint tags e.g. 'php,mysql,apache'
+    """
+    if not _check_rate_limit(session_id):
+        return _err("Rate limit exceeded.")
+    try:
+        stack_tags = [t.strip().lower()
+                      for t in tech_stack.split(",") if t.strip()]
+        SKILL_GRAPH = {
+            "recon": {
+                "tools": ["fingerprint_target","crawl_links",
+                          "enumerate_endpoints","check_headers",
+                          "http_request","add_injection_point"],
+                "next_phases": ["sqli","xss","auth","idor","config"],
+                "suggests": {"php": ["sqli","xss"],
+                             "java": ["sqli","xpath_injection"],
+                             "login": ["auth"],
+                             "api": ["idor"]}
+            },
+            "sqli": {
+                "tools": ["test_sqli","check_sqli_status",
+                          "get_sqli_results","add_finding"],
+                "prerequisites": ["recon"],
+                "next_phases": ["xss","auth"],
+                "stack_boost": {"php": 0.3, "mysql": 0.4,
+                                "mssql": 0.3, "oracle": 0.2}
+            },
+            "xss": {
+                "tools": ["test_xss","verify_xss_browser","add_finding"],
+                "prerequisites": ["recon"],
+                "next_phases": ["auth","idor"],
+                "stack_boost": {"php": 0.2, "javascript": 0.3}
+            },
+            "auth": {
+                "tools": ["test_auth_bypass","test_session_fixation",
+                          "analyse_cookies","add_finding"],
+                "prerequisites": ["recon"],
+                "next_phases": ["idor","config"],
+                "stack_boost": {"login": 0.5, "jwt": 0.3}
+            },
+            "idor": {
+                "tools": ["test_idor","http_request","add_finding"],
+                "prerequisites": ["recon"],
+                "next_phases": ["config"],
+                "stack_boost": {"api": 0.4, "rest": 0.3}
+            },
+            "config": {
+                "tools": ["check_headers","analyse_cookies",
+                          "test_csrf","add_finding"],
+                "prerequisites": ["recon"],
+                "next_phases": ["report"]
+            },
+            "report": {
+                "tools": ["generate_report","kill_all_scans"],
+                "prerequisites": [],
+                "next_phases": []
+            }
+        }
+        node = SKILL_GRAPH.get(phase, SKILL_GRAPH["recon"])
+        boost = node.get("stack_boost", {})
+        relevance = sum(boost.get(tag, 0) for tag in stack_tags)
+        suggestions = []
+        if phase == "recon" and stack_tags:
+            for tag in stack_tags:
+                for sug_phase, sug_tags in node.get("suggests",{}).items():
+                    if tag in sug_tags and sug_phase not in suggestions:
+                        suggestions.append(sug_phase)
+        _audit_log(session_id, "select_skills",
+                   {"phase": phase, "tech_stack": tech_stack},
+                   f"returned {len(node['tools'])} tools for {phase}")
+        return _ok({
+            "phase": phase,
+            "tools": node["tools"],
+            "prerequisites": node.get("prerequisites", []),
+            "next_phases": node.get("next_phases", []),
+            "stack_relevance_boost": round(relevance, 3),
+            "suggested_phases": suggestions,
+            "skill_count": len(node["tools"]),
+            "message": (f"SkillDAG: {len(node['tools'])} tools "
+                        f"for {phase} phase. "
+                        f"Stack boost: {relevance:.2f}")
+        })
+    except Exception as e:
+        return _err(str(e))
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # HTTP & RECON TOOLS (11–15)
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2187,7 +2280,7 @@ async def health(request):
     return JSONResponse({
         "status": "ok",
         "service": "redteam-v9-mcp",
-        "tools": 34,
+        "tools": 35,
         "version": "9.0.0",
     })
 

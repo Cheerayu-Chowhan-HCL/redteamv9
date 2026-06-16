@@ -1,0 +1,4 @@
+{
+  "payload": "{\"agent_type\":\"reflector\",\"capabilities\":[\"get_intent_incidents\",\"get_session_context\",\"distill_knowledge\",\"log_reasoning\",\"get_cross_session_insights\",\"generate_report\",\"kill_all_scans\"],\"description\":\"Post-phase reflector. Reviews incidents, distils knowledge, triggers transfer.\",\"id\":\"0e710d49-99e7-47b3-b0bb-40717cb6eb69\",\"issued_at\":\"2026-06-16T11:02:40.524470Z\",\"org\":\"hcltech-redteam-v9\",\"version\":\"9.0.0\"}",
+  "signature": "5151e986844e2bba80b754ccece33a56972b3b21ab051c207a4ecb49fa6cb585"
+}

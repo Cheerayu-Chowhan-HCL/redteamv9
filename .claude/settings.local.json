@@ -1,0 +1,19 @@
+﻿{
+  "permissions": {
+    "allow": [
+      "Bash(cd /c/users/chirayu/redteamv4 && find . -type f -name \"*.py\" -o -name \"*.json\" -o -name \"*.sh\" -o -name \"*.bat\" -o -name \"*.md\" -o -name \"*.txt\" | head -100)",
+      "Bash(cd /c/users/chirayu/redteamv5 && ls -la)",
+      "Bash(python -c ' *)",
+      "Bash(ls /mnt/c/users/chirayu/ 2>/dev/null || echo \"Path not accessible via WSL\")",
+      "PowerShell(python --version)",
+      "PowerShell(pip --version)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\users\\\\chirayu\\\\redteamv9\\\\docs\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Output \"Directory created\")",
+      "PowerShell(node --version)",
+      "PowerShell(python -m py_compile \"C:\\\\Users\\\\chirayu\\\\agent_discaa\\\\orchestrator\\\\main.py\"; Write-Host \"Exit: $LASTEXITCODE\")",
+      "PowerShell(cmd /c \"dir /s /b C:\\\\Users\\\\chirayu\\\\agent_discaa\" 2>nul | findstr /v \"node_modules\")",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\chirayu\\\\agent_discaa\" -Recurse | Where-Object { $_.FullName -notmatch \"node_modules\" } | Select-Object FullName)"
+    ]
+  }
+}

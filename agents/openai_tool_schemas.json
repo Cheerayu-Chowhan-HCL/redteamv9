@@ -1,0 +1,1027 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "create_session",
+      "description": "Create a new pentest session. Always call this first. Loads transfer learning priors.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "target_url": {
+            "type": "string"
+          },
+          "goal": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "target_url"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "set_branch",
+      "description": "Declare the active attack branch/phase. Creates AttackBranch and ThinkingDAG HypothesisNode.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "attack_type": {
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "attack_type"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "log_reasoning",
+      "description": "Log agent reasoning step. Written sanitised to ThinkingDAG; raw stored in SQLite only.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "step": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "agent",
+          "step",
+          "content"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "add_injection_point",
+      "description": "Record a discovered injectable parameter. Triggers MCTS backprop with reward=0.5.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "parameter": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "method": {
+            "default": "POST",
+            "type": "string"
+          },
+          "context": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "parameter",
+          "endpoint"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "add_finding",
+      "description": "Record a confirmed vulnerability. Triggers MCTS backprop with reward=1.0.\nbranch_id: optional \u2014 pass the branch_node_id returned by set_branch() to pin\nthis finding to your specific branch. Required for correct attribution when\nrunning as a parallel subtask alongside other agents.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "severity": {
+            "default": "medium",
+            "type": "string"
+          },
+          "endpoint": {
+            "default": "",
+            "type": "string"
+          },
+          "evidence": {
+            "default": "",
+            "type": "string"
+          },
+          "cvss": {
+            "default": "",
+            "type": "string"
+          },
+          "remediation": {
+            "default": "",
+            "type": "string"
+          },
+          "branch_id": {
+            "default": "",
+            "type": "string"
+          },
+          "attack_type": {
+            "default": "general",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "title"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_session_context",
+      "description": "Get full session context: findings, injection points, key facts, reasoning. Call at start of each loop.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "score_branches",
+      "description": "Rank attack branches using BayesianMCTS. Returns confidence + entropy per branch. Primary planning tool.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "candidate_branches": {
+            "default": "",
+            "type": "string"
+          },
+          "top_k": {
+            "default": 5,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "distill_knowledge",
+      "description": "Save a key insight to the session knowledge base. Also updates transfer learning.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "key_insight": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "key_insight"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "retrieve_knowledge",
+      "description": "Semantic search over PayloadsAllTheThings RAG. Returns payloads to agent only \u2014 never written to DAG.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "top_k": {
+            "default": 5,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_cross_session_insights",
+      "description": "Get historical success rates for a tech stack + attack type combo from all past sessions.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "tech_stack": {
+            "default": "",
+            "type": "string"
+          },
+          "attack_type": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "declare_intent",
+      "description": "Planner MUST call this after score_branches() and before delegating\nto the Executor. Creates the authorisation contract for the current phase.\ntools_authorised: comma-separated list of tool names the Executor may call.\nThe IntentCorrelationMiddleware checks every subsequent tool call against this.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "intent": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number"
+          },
+          "tools_authorised": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "rationale": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "phase",
+          "intent",
+          "confidence",
+          "tools_authorised",
+          "scope"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_intent_incidents",
+      "description": "Reflector calls this at end of each phase to review agent behaviour.\nReturns all MAST-classified intent deviations for the session.\nseverity: filter by low|medium|high|critical (empty = all)",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "severity": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "select_skills",
+      "description": "SkillDAG dynamic skill selection \u2014 Phase 3.\nReturns the relevant skill subgraph for the current phase\nand tech stack. Replaces static read_skill() for adaptive\nmethodology selection.\nphase: recon|sqli|xss|auth|idor|config|report\ntech_stack: comma-separated fingerprint tags e.g. 'php,mysql,apache'",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "tech_stack": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "phase"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "http_request",
+      "description": "Make an HTTP request. Returns safe summary \u2014 full body is stripped for prompt injection defence.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "method": {
+            "default": "GET",
+            "type": "string"
+          },
+          "headers": {
+            "default": "{}",
+            "type": "string"
+          },
+          "data": {
+            "default": "{}",
+            "type": "string"
+          },
+          "cookies": {
+            "default": "{}",
+            "type": "string"
+          },
+          "allow_redirects": {
+            "default": "true",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 15,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "check_headers",
+      "description": "Check security headers. Auto-logs findings for missing critical headers.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "enumerate_endpoints",
+      "description": "Async directory/endpoint discovery. wordlist_size: small|medium|large.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "base_url": {
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          },
+          "wordlist_size": {
+            "default": "medium",
+            "type": "string"
+          }
+        },
+        "required": [
+          "base_url"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "fingerprint_target",
+      "description": "Detect web server, framework, language, CMS, WAF, JS libraries. Updates MCTS priors.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "crawl_links",
+      "description": "Spider the target. Extracts links, forms, input fields, file upload points.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          },
+          "depth": {
+            "default": 2,
+            "type": "integer"
+          },
+          "max_pages": {
+            "default": 50,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "test_sqli",
+      "description": "Start async sqlmap scan. Returns job_id immediately. Poll with check_sqli_status.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "parameter": {
+            "type": "string"
+          },
+          "method": {
+            "default": "GET",
+            "type": "string"
+          },
+          "data": {
+            "default": "{}",
+            "type": "string"
+          },
+          "cookies": {
+            "default": "{}",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "parameter"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "check_sqli_status",
+      "description": "Poll sqlmap scan status. Returns: running|complete|error.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_sqli_results",
+      "description": "Get sqlmap results. Calls add_finding for confirmed injections. Raw output in SQLite only.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "test_xss",
+      "description": "Test reflected/stored XSS. Uses RAG knowledge base for payload selection.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "parameter": {
+            "type": "string"
+          },
+          "payload_hint": {
+            "default": "",
+            "type": "string"
+          },
+          "method": {
+            "default": "GET",
+            "type": "string"
+          },
+          "data": {
+            "default": "{}",
+            "type": "string"
+          },
+          "cookies": {
+            "default": "{}",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "parameter"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "verify_xss_browser",
+      "description": "Use Playwright headless browser to confirm XSS execution.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "xss_test_id": {
+            "default": "",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "test_xpath_injection",
+      "description": "Test XPath injection with error-based and boolean-based probes.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "parameter": {
+            "type": "string"
+          },
+          "method": {
+            "default": "POST",
+            "type": "string"
+          },
+          "data": {
+            "default": "{}",
+            "type": "string"
+          },
+          "cookies": {
+            "default": "{}",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "parameter"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "test_command_injection",
+      "description": "Test OS command injection via timing-based blind detection.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "parameter": {
+            "type": "string"
+          },
+          "method": {
+            "default": "POST",
+            "type": "string"
+          },
+          "data": {
+            "default": "{}",
+            "type": "string"
+          },
+          "cookies": {
+            "default": "{}",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "parameter"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "test_auth_bypass",
+      "description": "Test auth bypass: SQLi, default creds, blank password, response manipulation. Generic.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "login_endpoint": {
+            "type": "string"
+          },
+          "username_field": {
+            "default": "username",
+            "type": "string"
+          },
+          "password_field": {
+            "default": "password",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "login_endpoint"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "test_idor",
+      "description": "Test IDOR by iterating IDs. Detects access control failures by response differences.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "base_url": {
+            "type": "string"
+          },
+          "endpoint_pattern": {
+            "type": "string"
+          },
+          "id_param": {
+            "type": "string"
+          },
+          "cookies": {
+            "default": "{}",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "base_url",
+          "endpoint_pattern",
+          "id_param"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "test_csrf",
+      "description": "Check CSRF token presence, entropy, and token reuse.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "form_endpoint": {
+            "default": "",
+            "type": "string"
+          },
+          "cookies": {
+            "default": "{}",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "analyse_cookies",
+      "description": "Analyse cookies: Secure flag, HttpOnly, SameSite, entropy, expiry.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "cookies_dict": {
+            "default": "{}",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "test_session_fixation",
+      "description": "Test if session token changes after authentication.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "run_nuclei_scan",
+      "description": "Start async nuclei scan. Poll with check_nuclei_status. templates: comma-separated list.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "target_url": {
+            "type": "string"
+          },
+          "templates": {
+            "default": "misconfigurations",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_url"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "check_nuclei_status",
+      "description": "Poll nuclei scan. Returns: running|complete|error + finding count.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "kill_all_scans",
+      "description": "Kill all running sqlmap and nuclei subprocesses. Always call after async scan sequences.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "shell_exec",
+      "description": "Controlled shell execution. Certain destructive commands are blocked.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "type": "string"
+          },
+          "working_dir": {
+            "default": "C:/Users/chirayu/redteamv9/.tmp/rtv9_sandbox",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "generate_report",
+      "description": "Generate a standalone HTML pentest report for the session.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "read_skill",
+      "description": "Read the pentest skill/methodology file for the current phase.\nUsed by AEX agents to load the full V9 methodology before each attack phase.\nmode: phase name e.g. 'recon', 'auth_bypass', 'sqli', 'idor', 'csrf',\n      'config_review', 'session_fixation', 'report', 'phase_0'\nphase: phase number 0-6\nReturns full skill file content \u2014 agent extracts the relevant phase section.",
+      "parameters": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "default": "phase_0",
+            "type": "string"
+          },
+          "phase": {
+            "default": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    }
+  }
+]

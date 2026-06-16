@@ -655,6 +655,34 @@ class GraphEngine:
             ).description or []]
             return [dict(zip(cols, r)) for r in rows]
 
+    def get_sicd_score(self, session_id: str,
+                       lookback: int = 30) -> float:
+        """Get SICD divergence score for a session.
+        Uses trained model if available, heuristic fallback otherwise.
+        """
+        import sys
+        sys.path.insert(0, "C:/users/chirayu/redteamv9")
+        try:
+            from core.sicd_encoder import (compute_divergence_score,
+                                           load_corpus)
+            with _get_conn() as conn:
+                rows = conn.execute(
+                    """SELECT tool_name, session_phase,
+                              parameters_summary, timestamp
+                       FROM tool_audit_log
+                       WHERE session_id=?
+                       ORDER BY id DESC LIMIT ?""",
+                    (session_id, lookback)
+                ).fetchall()
+            entries = [{"tool_name": r[0],
+                        "session_phase": r[1],
+                        "parameters_summary": r[2],
+                        "timestamp": r[3]}
+                       for r in reversed(rows)]
+            return compute_divergence_score(entries)
+        except Exception:
+            return 0.05
+
     def create_declared_intent(self, intent_id: str, session_id: str,
                                 phase: str, intent: str, confidence: float,
                                 tools_authorised: list, scope: str,

@@ -1,0 +1,4 @@
+{
+  "payload": "{\"agent_type\":\"executor\",\"capabilities\":[\"http_request\",\"fingerprint_target\",\"crawl_links\",\"enumerate_endpoints\",\"check_headers\",\"analyse_cookies\",\"test_sqli\",\"check_sqli_status\",\"get_sqli_results\",\"test_xss\",\"verify_xss_browser\",\"test_auth_bypass\",\"test_session_fixation\",\"test_idor\",\"test_csrf\",\"test_xpath_injection\",\"test_command_injection\",\"test_path_traversal\",\"run_nuclei_scan\",\"check_nuclei_status\",\"get_nuclei_results\",\"shell_exec\",\"add_finding\",\"add_injection_point\",\"log_reasoning\"],\"description\":\"Attack tool executor. Runs all active pentest tools against the target.\",\"id\":\"d1a0ee30-c96e-4870-bf0f-48b9cb6fe89d\",\"issued_at\":\"2026-06-16T11:02:40.503482Z\",\"org\":\"hcltech-redteam-v9\",\"version\":\"9.0.0\"}",
+  "signature": "a8c3be4058c7dab1559be11252e0f57ccdaace700d4ebbd92b4fc12d54b45c19"
+}

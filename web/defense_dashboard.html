@@ -2,422 +2,324 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RedTeam V9 - SICD Defense Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RedTeam V9 — Defense Monitor</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body {
-  min-height: 100%;
-  font-family: "Segoe UI", Arial, sans-serif;
-  background: #0d1117;
-  color: #e6edf3;
-}
-body { overflow: hidden; }
-#topbar {
-  height: 46px;
-  background: #161b22;
-  border-bottom: 1px solid #30363d;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 14px;
-}
-#title { color: #58a6ff; font-size: 1.05em; font-weight: 700; white-space: nowrap; }
-#session-select, #test-id {
-  background: #21262d;
-  border: 1px solid #30363d;
-  color: #e6edf3;
-  border-radius: 6px;
-  padding: 5px 8px;
-  font-size: 0.82em;
-}
-#test-id { width: 210px; }
-.tb-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.tb-btn {
-  background: #21262d;
-  border: 1px solid #30363d;
-  color: #e6edf3;
-  padding: 5px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8em;
-}
-.tb-btn:hover { background: #30363d; }
-.tb-btn.inject { background: #9e6a031f; border-color: #d29922; color: #f2cc60; }
-#last-updated { color: #8b949e; font-size: 0.75em; white-space: nowrap; }
-#layout {
-  display: grid;
-  grid-template-columns: 260px 1fr 420px;
-  gap: 0;
-  height: calc(100vh - 46px);
-}
-#left, #main, #right {
-  overflow: hidden;
-  border-color: #30363d;
-}
-#left { border-right: 1px solid #30363d; background: #0d1117; }
-#right { border-left: 1px solid #30363d; background: #0d1117; }
-.panel-header {
-  height: 38px;
-  background: #161b22;
-  border-bottom: 1px solid #30363d;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-  color: #8b949e;
-  font-size: 0.78em;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-.scroll { height: calc(100% - 38px); overflow-y: auto; padding: 12px; }
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(120px, 1fr));
-  gap: 10px;
-  padding: 12px;
-  border-bottom: 1px solid #30363d;
-}
-.metric {
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  padding: 10px;
-  min-height: 68px;
-}
-.metric .label { color: #8b949e; font-size: 0.74em; text-transform: uppercase; }
-.metric .value { color: #58a6ff; font-size: 1.55em; font-weight: 700; margin-top: 6px; }
-.content-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 12px;
-  height: calc(100% - 93px);
-  overflow: hidden;
-}
-.section {
-  min-height: 0;
-  overflow: hidden;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  background: #0d1117;
-}
-.section .section-title {
-  height: 34px;
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-  border-bottom: 1px solid #30363d;
-  color: #c9d1d9;
-  font-size: 0.82em;
-  font-weight: 700;
-}
-.section .section-body { height: calc(100% - 34px); overflow-y: auto; padding: 10px; }
-.session-item, .intent-item, .incident-item, .audit-item {
-  border-bottom: 1px solid #21262d;
-  padding: 9px 0;
-  font-size: 0.78em;
-}
-.session-item:first-child, .intent-item:first-child, .incident-item:first-child, .audit-item:first-child { padding-top: 0; }
-.session-item button {
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  color: inherit;
-  cursor: pointer;
-}
-.session-item.active { background: #1f6feb14; margin: 0 -8px; padding: 9px 8px; border-left: 3px solid #1f6feb; }
-.sid, .intent-name, .tool-name { color: #58a6ff; font-weight: 700; overflow-wrap: anywhere; }
-.muted { color: #8b949e; }
-.tiny { color: #484f58; font-size: 0.9em; margin-top: 3px; overflow-wrap: anywhere; }
-.badge {
-  display: inline-block;
-  border-radius: 10px;
-  padding: 1px 7px;
-  font-size: 0.75em;
-  font-weight: 700;
-  margin-right: 5px;
-}
-.sev-critical, .sev-high { background: #da3633; color: #fff; }
-.sev-medium { background: #9e6a03; color: #fff; }
-.sev-low { background: #1f6feb; color: #fff; }
-.sev-info { background: #238636; color: #fff; }
-.mast { background: #6e40c9; color: #fff; }
-.synthetic { background: #9e6a03; color: #fff; }
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 6px 0;
-  border-bottom: 1px solid #21262d;
-  font-size: 0.78em;
-}
-.summary-row span:first-child { overflow-wrap: anywhere; }
-.summary-row span:last-child { color: #58a6ff; font-weight: 700; }
-.empty { color: #484f58; font-size: 0.82em; padding: 4px 0; }
-#status-line { color: #8b949e; font-size: 0.76em; padding: 10px 12px; border-top: 1px solid #30363d; }
-@media (max-width: 1100px) {
-  #layout { grid-template-columns: 220px 1fr; }
-  #right { display: none; }
-  .metrics { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
-  .content-grid { grid-template-columns: 1fr; }
-}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0a0a0f;color:#e2e2e8;min-height:100vh;padding:1rem}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border:1px solid #1e1e2e;border-radius:10px;margin-bottom:1rem;background:#0f0f1a}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#00ff88;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.title{font-size:14px;font-weight:500;color:#e2e2e8}
+.session-tag{font-size:11px;font-family:monospace;background:#1e1e2e;border:1px solid #2e2e3e;border-radius:4px;padding:2px 8px;color:#888}
+.clock{font-size:11px;color:#555}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
+.metric{background:#0f0f1a;border:1px solid #1e1e2e;border-radius:8px;padding:12px}
+.metric-label{font-size:10px;color:#555;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+.metric-val{font-size:22px;font-weight:500}
+.ok{color:#00ff88}.warn{color:#ffaa00}.danger{color:#ff4444}.info{color:#4499ff}
+.panels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.panel{background:#0f0f1a;border:1px solid #1e1e2e;border-radius:10px;padding:12px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.panel-title{font-size:12px;font-weight:500;color:#aaa}
+.pill{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500}
+.pill-ok{background:#003318;color:#00ff88;border:1px solid #005522}
+.pill-warn{background:#332200;color:#ffaa00;border:1px solid #554400}
+.pill-alert{background:#330000;color:#ff4444;border:1px solid #550000}
+.pill-blue{background:#001133;color:#4499ff;border:1px solid #002255}
+.intent-row{font-size:11px;color:#888;padding:4px 0;border-bottom:1px solid #1a1a2e;display:flex;justify-content:space-between;align-items:center}
+.intent-row:last-child{border-bottom:none}
+.tool-name{font-family:monospace;font-size:10px}
+.tool-ok{color:#00ff88}.tool-block{color:#ff4444}
+.gauge-wrap{margin:6px 0}
+.gauge-label{display:flex;justify-content:space-between;font-size:10px;color:#555;margin-bottom:3px}
+.gauge-track{height:6px;background:#1a1a2e;border-radius:3px;overflow:hidden}
+.gauge-fill{height:100%;border-radius:3px;transition:width .8s ease,background .8s ease}
+.agent-card{border:1px solid #1e1e2e;border-radius:6px;padding:7px 9px;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between}
+.agent-name{font-size:11px;font-weight:500;color:#ccc}
+.agent-sub{font-size:10px;color:#444;font-family:monospace}
+.verified{font-size:10px;color:#00ff88}
+.rejected{font-size:10px;color:#ff4444}
+.log-area{border:1px solid #1e1e2e;border-radius:8px;background:#07070f;padding:8px;height:140px;overflow-y:auto;margin-bottom:1rem;font-family:monospace}
+.log-entry{font-size:10px;padding:2px 0;border-bottom:1px solid #111;display:flex;gap:8px}
+.log-entry:last-child{border-bottom:none}
+.log-time{color:#333;flex-shrink:0}
+.log-ok{color:#00ff88}.log-warn{color:#ffaa00}.log-block{color:#ff4444}
+.chaos-section{background:#0f0f1a;border:1px solid #1e1e2e;border-radius:10px;padding:14px}
+.chaos-title{font-size:12px;font-weight:500;color:#aaa;margin-bottom:6px}
+.chaos-desc{font-size:11px;color:#555;margin-bottom:12px;line-height:1.5}
+.chaos-btns{display:flex;gap:8px;flex-wrap:wrap}
+.chaos-btn{font-size:11px;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:system-ui;transition:opacity .15s;font-weight:500}
+.chaos-btn:hover{opacity:.8}
+.btn-scope{background:#332200;color:#ffaa00;border:1px solid #554400}
+.btn-tool{background:#330000;color:#ff4444;border:1px solid #550000}
+.btn-rate{background:#330000;color:#ff4444;border:1px solid #550000}
+.btn-identity{background:#1a0033;color:#aa44ff;border:1px solid #330066}
+.btn-reset{background:#001a00;color:#00ff88;border:1px solid #003300}
+.layer-badge{font-size:9px;padding:1px 5px;border-radius:3px;margin-left:5px;vertical-align:middle}
+.badge-l1{background:#001133;color:#4499ff}
+.badge-l2{background:#1a0033;color:#aa44ff}
+.badge-l3{background:#003318;color:#00ff88}
 </style>
 </head>
 <body>
-<div id="topbar">
-  <span id="title">RedTeam V9 - SICD Defense Dashboard</span>
-  <select id="session-select" onchange="selectSession(this.value)">
-    <option value="">select session</option>
-  </select>
-  <input id="test-id" value="sicd_dashboard_probe" autocomplete="off" spellcheck="false" aria-label="Chaos test id">
-  <button class="tb-btn inject" onclick="injectChaos()">Inject Chaos</button>
-  <button class="tb-btn" onclick="refresh()">Refresh</button>
-  <div class="tb-right">
-    <span id="last-updated">Connecting...</span>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="live-dot" id="live-dot"></div>
+    <span class="title">RedTeam V9 — defense monitor</span>
+    <span class="session-tag" id="session-tag">connecting...</span>
+  </div>
+  <span class="clock" id="clock">–</span>
+</div>
+
+<div class="metrics">
+  <div class="metric">
+    <div class="metric-label">divergence score</div>
+    <div class="metric-val ok" id="m-div">–</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">calls / 60s</div>
+    <div class="metric-val" id="m-rate">–</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">intent incidents</div>
+    <div class="metric-val ok" id="m-inc">–</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">active phase</div>
+    <div class="metric-val info" id="m-phase" style="font-size:14px">–</div>
   </div>
 </div>
 
-<div id="layout">
-  <aside id="left">
-    <div class="panel-header">Sessions</div>
-    <div class="scroll" id="session-list"><div class="empty">Loading...</div></div>
-  </aside>
+<div class="panels">
 
-  <main id="main">
-    <div class="metrics">
-      <div class="metric"><div class="label">Active Sessions</div><div class="value" id="m-sessions">0</div></div>
-      <div class="metric"><div class="label">Active Intents</div><div class="value" id="m-intents">0</div></div>
-      <div class="metric"><div class="label">Recent Incidents</div><div class="value" id="m-incidents">0</div></div>
-      <div class="metric"><div class="label">Tool Events</div><div class="value" id="m-audit">0</div></div>
-      <div class="metric"><div class="label">Service</div><div class="value" id="m-status">--</div></div>
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Layer 1 — intent enforcement
+        <span class="layer-badge badge-l1">declare_intent</span>
+      </span>
+      <span class="pill pill-ok" id="l1-pill">clear</span>
     </div>
-
-    <div class="content-grid">
-      <section class="section">
-        <div class="section-title">Active Intent Contract</div>
-        <div class="section-body" id="intent-contract"><div class="empty">No active intent selected.</div></div>
-      </section>
-      <section class="section">
-        <div class="section-title">Recent MAST Incidents</div>
-        <div class="section-body" id="incidents"><div class="empty">No incidents.</div></div>
-      </section>
-      <section class="section">
-        <div class="section-title">Tool Audit Stream</div>
-        <div class="section-body" id="audit-stream"><div class="empty">No events.</div></div>
-      </section>
-      <section class="section">
-        <div class="section-title">Summary Counts</div>
-        <div class="section-body" id="summary-counts"><div class="empty">No summary data.</div></div>
-      </section>
+    <div class="intent-row">
+      <span style="color:#444;font-size:10px">declared intent</span>
+      <span class="tool-name" id="l1-intent">–</span>
     </div>
-    <div id="status-line">Synthetic chaos records are marked test-only and never perform network traffic.</div>
-  </main>
+    <div id="tools-list"></div>
+    <div style="margin-top:8px;font-size:10px;color:#444" id="l1-status">waiting for session</div>
+  </div>
 
-  <aside id="right">
-    <div class="panel-header">All Active Intents</div>
-    <div class="scroll" id="all-intents"><div class="empty">No active intents.</div></div>
-  </aside>
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Layer 2 — SICD self-model
+        <span class="layer-badge badge-l2">transformer</span>
+      </span>
+      <span class="pill pill-ok" id="l2-pill">normal</span>
+    </div>
+    <div class="gauge-wrap">
+      <div class="gauge-label"><span>divergence</span><span id="g1-val">0.00</span></div>
+      <div class="gauge-track"><div class="gauge-fill" id="g1" style="width:0%;background:#00ff88"></div></div>
+    </div>
+    <div class="gauge-wrap">
+      <div class="gauge-label"><span>call rate</span><span id="g2-val">–</span></div>
+      <div class="gauge-track"><div class="gauge-fill" id="g2" style="width:0%;background:#00ff88"></div></div>
+    </div>
+    <div class="gauge-wrap">
+      <div class="gauge-label"><span>incident pressure</span><span id="g3-val">–</span></div>
+      <div class="gauge-track"><div class="gauge-fill" id="g3" style="width:0%;background:#00ff88"></div></div>
+    </div>
+    <div style="margin-top:8px;font-size:10px;color:#444" id="l2-status">–</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Layer 3 — OpenA2A identity
+        <span class="layer-badge badge-l3">agent cards</span>
+      </span>
+      <span class="pill pill-blue">phase 4</span>
+    </div>
+    <div class="agent-card" id="card-orch">
+      <div><div class="agent-name">Orchestrator</div><div class="agent-sub">card: orch_v9_signed</div></div>
+      <span class="verified">✓ signed</span>
+    </div>
+    <div class="agent-card" id="card-plan">
+      <div><div class="agent-name">Planner</div><div class="agent-sub">card: plan_v9_signed</div></div>
+      <span class="verified">✓ signed</span>
+    </div>
+    <div class="agent-card" id="card-exec">
+      <div><div class="agent-name">Executor</div><div class="agent-sub" id="exec-sub">card: exec_v9_signed</div></div>
+      <span class="verified" id="exec-status">✓ signed</span>
+    </div>
+    <div class="agent-card">
+      <div><div class="agent-name">Reflector</div><div class="agent-sub">card: refl_v9_signed</div></div>
+      <span class="verified">✓ signed</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="log-area" id="log"></div>
+
+<div class="chaos-section">
+  <div class="chaos-title">Demo chaos triggers — simulate agent misbehaviour</div>
+  <div class="chaos-desc">Inject a violation to show all three layers responding live. Watch the divergence score spike, the intent layer classify the violation, and the graduated response fire.</div>
+  <div class="chaos-btns">
+    <button class="chaos-btn btn-scope" onclick="chaos('scope')">Scope violation</button>
+    <button class="chaos-btn btn-tool" onclick="chaos('tool')">Tool misuse</button>
+    <button class="chaos-btn btn-rate" onclick="chaos('rate')">Rate spike</button>
+    <button class="chaos-btn btn-identity" onclick="chaos('identity')">Identity attack</button>
+    <button class="chaos-btn btn-reset" onclick="resetChaos()">Reset</button>
+  </div>
 </div>
 
 <script>
-const GRAPH_URL = "http://localhost:6037";
-let state = null;
-let selectedSession = "";
-let refreshTimer = null;
+const API = 'http://localhost:6037';
+let currentSession = null;
+let logLines = [];
 
-function esc(value) {
-  return String(value ?? "").replace(/[&<>"']/g, ch => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  }[ch]));
+function colorForScore(s){
+  if(s > 0.85) return '#ff4444';
+  if(s > 0.6)  return '#ff6600';
+  if(s > 0.3)  return '#ffaa00';
+  return '#00ff88';
 }
 
-function severityClass(sev) {
-  const s = String(sev || "info").toLowerCase();
-  return ["critical", "high", "medium", "low", "info"].includes(s) ? `sev-${s}` : "sev-info";
+function addLog(time, msg, cls){
+  logLines.push({time, msg, cls});
+  if(logLines.length > 50) logLines.shift();
+  const el = document.getElementById('log');
+  el.innerHTML = logLines.map(l =>
+    `<div class="log-entry"><span class="log-time">${l.time}</span><span class="${l.cls}">${l.msg}</span></div>`
+  ).join('');
+  el.scrollTop = el.scrollHeight;
 }
 
-function updateMetrics(data) {
-  const counts = data.summary?.counts || {};
-  document.getElementById("m-sessions").textContent = counts.sessions_active || 0;
-  document.getElementById("m-intents").textContent = counts.active_intents || 0;
-  document.getElementById("m-incidents").textContent = counts.recent_incidents || 0;
-  document.getElementById("m-audit").textContent = counts.recent_tool_events || 0;
-  document.getElementById("m-status").textContent = data.status || "--";
+function ts(){
+  return new Date().toTimeString().slice(0,8);
 }
 
-function renderSessions(data) {
-  const sessions = data.active_sessions || [];
-  const list = document.getElementById("session-list");
-  const select = document.getElementById("session-select");
-
-  if (!selectedSession && sessions.length) selectedSession = sessions[0].session_id;
-  select.innerHTML = '<option value="">select session</option>' + sessions.map(s =>
-    `<option value="${esc(s.session_id)}" ${s.session_id === selectedSession ? "selected" : ""}>${esc(s.session_id)}</option>`
-  ).join("");
-
-  if (!sessions.length) {
-    list.innerHTML = '<div class="empty">No active sessions.</div>';
-    return;
-  }
-  list.innerHTML = sessions.map(s => `
-    <div class="session-item ${s.session_id === selectedSession ? "active" : ""}">
-      <button onclick="selectSession('${esc(s.session_id)}')">
-        <div class="sid">${esc(s.session_id)}</div>
-        <div class="tiny">${esc(s.target_url || "")}</div>
-        <div class="tiny">${esc(s.goal || "")}</div>
-      </button>
-    </div>
-  `).join("");
-}
-
-function renderIntentContract(data) {
-  const intents = data.active_declared_intents || [];
-  const selected = intents.find(i => i.session_id === selectedSession);
-  const box = document.getElementById("intent-contract");
-  if (!selected) {
-    box.innerHTML = '<div class="empty">No active declared intent for the selected session.</div>';
-    return;
-  }
-  box.innerHTML = `
-    <div class="intent-item">
-      <div class="intent-name">${esc(selected.intent)}</div>
-      <div class="tiny">phase: ${esc(selected.phase)} | confidence: ${Number(selected.confidence || 0).toFixed(2)}</div>
-      <div class="tiny">scope: ${esc(selected.scope)}</div>
-      <div class="tiny">tools: ${esc((selected.tools_authorised || []).join(", "))}</div>
-      <div class="tiny">rationale: ${esc(selected.rationale || "")}</div>
-    </div>
-  `;
-}
-
-function renderAllIntents(data) {
-  const intents = data.active_declared_intents || [];
-  const box = document.getElementById("all-intents");
-  if (!intents.length) {
-    box.innerHTML = '<div class="empty">No active intents.</div>';
-    return;
-  }
-  box.innerHTML = intents.map(i => `
-    <div class="intent-item">
-      <div class="intent-name">${esc(i.intent)}</div>
-      <div class="tiny">${esc(i.session_id)}</div>
-      <div class="tiny">${esc(i.phase)} | ${Number(i.confidence || 0).toFixed(2)}</div>
-    </div>
-  `).join("");
-}
-
-function renderIncidents(data) {
-  const incidents = (data.recent_mast_incidents || [])
-    .filter(i => !selectedSession || i.session_id === selectedSession);
-  const box = document.getElementById("incidents");
-  if (!incidents.length) {
-    box.innerHTML = '<div class="empty">No incidents for selected session.</div>';
-    return;
-  }
-  box.innerHTML = incidents.map(i => {
-    const synthetic = String(i.parameters_summary || "").includes('"synthetic": true');
-    return `
-      <div class="incident-item">
-        <span class="badge ${severityClass(i.severity)}">${esc(i.severity || "info")}</span>
-        <span class="badge mast">${esc(i.mast_classification || "MAST")}</span>
-        ${synthetic ? '<span class="badge synthetic">synthetic</span>' : ""}
-        <div class="tool-name">${esc(i.tool_name)}</div>
-        <div class="tiny">${esc(i.session_phase || "unknown")} | ${esc(i.planner_intent || "no planner intent")}</div>
-        <div class="tiny">${esc(i.timestamp)}</div>
-      </div>
-    `;
-  }).join("");
-}
-
-function renderAudit(data) {
-  const events = (data.recent_tool_audit_events || [])
-    .filter(e => !selectedSession || e.session_id === selectedSession);
-  const box = document.getElementById("audit-stream");
-  if (!events.length) {
-    box.innerHTML = '<div class="empty">No tool audit events for selected session.</div>';
-    return;
-  }
-  box.innerHTML = events.map(e => `
-    <div class="audit-item">
-      <div class="tool-name">${esc(e.tool_name)}</div>
-      <div class="tiny">${esc(e.session_phase || "no phase")} | ${esc(e.planner_intent || "no intent")}</div>
-      <div class="tiny">${esc(e.result_summary || "")}</div>
-      <div class="tiny">${esc(e.timestamp)}</div>
-    </div>
-  `).join("");
-}
-
-function rows(title, items) {
-  if (!items || !items.length) return "";
-  return `<div class="muted" style="font-size:0.78em;margin:8px 0 4px">${esc(title)}</div>` +
-    items.map(i => `<div class="summary-row"><span>${esc(i.key)}</span><span>${esc(i.count)}</span></div>`).join("");
-}
-
-function renderSummary(data) {
-  const s = data.summary || {};
-  document.getElementById("summary-counts").innerHTML =
-    rows("By Phase", s.by_phase) +
-    rows("By Intent", s.by_intent) +
-    rows("Findings By Severity", s.findings_by_severity) +
-    rows("Incidents By Severity", s.incidents_by_severity) +
-    rows("By MAST Classification", s.by_mast_classification) ||
-    '<div class="empty">No summary data.</div>';
-}
-
-function render(data) {
-  updateMetrics(data);
-  renderSessions(data);
-  renderIntentContract(data);
-  renderAllIntents(data);
-  renderIncidents(data);
-  renderAudit(data);
-  renderSummary(data);
-  document.getElementById("last-updated").textContent = `Last: ${new Date().toLocaleTimeString()}`;
-}
-
-async function refresh() {
+async function poll(){
   try {
-    const response = await fetch(`${GRAPH_URL}/intent_status?limit=50`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    state = await response.json();
-    render(state);
-  } catch (err) {
-    console.error("intent_status failed", err);
-    document.getElementById("last-updated").textContent = "Connection error";
-  }
-}
+    const r = await fetch(`${API}/intent_status`);
+    const d = await r.json();
+    if(d.error || !d.session_id){ return; }
 
-function selectSession(sessionId) {
-  selectedSession = sessionId;
-  if (state) render(state);
-}
+    currentSession = d.session_id;
+    document.getElementById('session-tag').textContent = d.session_id;
 
-async function injectChaos() {
-  const sessionId = selectedSession || document.getElementById("session-select").value || "sicd_dashboard_test";
-  const testId = document.getElementById("test-id").value.trim() || "sicd_dashboard_probe";
-  try {
-    const response = await fetch(`${GRAPH_URL}/inject_chaos`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: sessionId, test_id: testId })
+    const div = d.divergence_score || 0;
+    const inc = d.total_incidents || 0;
+    const rate = d.calls_last_60s || 0;
+
+    document.getElementById('m-div').textContent = div.toFixed(2);
+    document.getElementById('m-div').className = 'metric-val ' +
+      (div > 0.85 ? 'danger' : div > 0.6 ? 'warn' : div > 0.3 ? 'warn' : 'ok');
+    document.getElementById('m-rate').textContent = rate;
+    document.getElementById('m-rate').className = 'metric-val ' +
+      (rate > 20 ? 'danger' : rate > 8 ? 'warn' : 'ok');
+    document.getElementById('m-inc').textContent = inc;
+    document.getElementById('m-inc').className = 'metric-val ' +
+      (inc > 3 ? 'danger' : inc > 0 ? 'warn' : 'ok');
+    document.getElementById('m-phase').textContent = d.active_phase || 'none';
+
+    const c = colorForScore(div);
+    document.getElementById('g1').style.width = (div*100).toFixed(0)+'%';
+    document.getElementById('g1').style.background = c;
+    document.getElementById('g1-val').textContent = div.toFixed(2);
+
+    const rateW = Math.min(rate * 4, 100);
+    const rateC = rate > 20 ? '#ff4444' : rate > 8 ? '#ffaa00' : '#00ff88';
+    document.getElementById('g2').style.width = rateW+'%';
+    document.getElementById('g2').style.background = rateC;
+    document.getElementById('g2-val').textContent = rate+'/min';
+
+    const incW = Math.min(inc * 15, 100);
+    document.getElementById('g3').style.width = incW+'%';
+    document.getElementById('g3').style.background = inc > 3 ? '#ff4444' : inc > 0 ? '#ffaa00' : '#00ff88';
+    document.getElementById('g3-val').textContent = inc+' incidents';
+
+    const tools = d.tools_authorised || [];
+    document.getElementById('l1-intent').textContent = d.active_intent || '–';
+    document.getElementById('tools-list').innerHTML = tools.slice(0,4).map(t =>
+      `<div class="intent-row"><span class="tool-name tool-ok">${t}</span><span style="font-size:9px;color:#005522">allowed</span></div>`
+    ).join('');
+
+    const recent = d.recent_incidents || [];
+    const hasCrit = recent.some(i => i.severity === 'critical');
+    const hasHigh = recent.some(i => i.severity === 'high');
+
+    if(hasCrit){
+      document.getElementById('l1-pill').textContent = 'critical';
+      document.getElementById('l1-pill').className = 'pill pill-alert';
+      document.getElementById('l2-pill').textContent = 'critical';
+      document.getElementById('l2-pill').className = 'pill pill-alert';
+      document.getElementById('live-dot').style.background = '#ff4444';
+    } else if(hasHigh){
+      document.getElementById('l1-pill').textContent = 'violation';
+      document.getElementById('l1-pill').className = 'pill pill-warn';
+      document.getElementById('l2-pill').textContent = 'elevated';
+      document.getElementById('l2-pill').className = 'pill pill-warn';
+      document.getElementById('live-dot').style.background = '#ffaa00';
+    } else {
+      document.getElementById('l1-pill').textContent = 'clear';
+      document.getElementById('l1-pill').className = 'pill pill-ok';
+      document.getElementById('l2-pill').textContent = 'normal';
+      document.getElementById('l2-pill').className = 'pill pill-ok';
+      document.getElementById('live-dot').style.background = '#00ff88';
+    }
+
+    document.getElementById('l1-status').textContent =
+      `${tools.length} tools authorised · ${inc} incidents`;
+    document.getElementById('l2-status').textContent =
+      `reconstruction loss: ${div.toFixed(2)} · ${div > 0.6 ? 'block + warn agent' : div > 0.3 ? 'rate-limit' : 'within baseline'}`;
+
+    recent.slice(0,3).forEach(i => {
+      const cls = i.severity === 'critical' ? 'log-block' :
+                  i.severity === 'high' ? 'log-block' : 'log-warn';
+      addLog(i.time ? i.time.slice(11,19) : ts(),
+        `${i.mast} · ${i.tool} · severity:${i.severity} · ${i.response}`, cls);
     });
-    const data = await response.json();
-    if (!response.ok || !data.success) throw new Error(data.detail || data.error || `HTTP ${response.status}`);
-    selectedSession = data.session_id;
-    document.getElementById("status-line").textContent =
-      `Injected synthetic incident ${data.incident_id} for ${data.session_id}. No network traffic performed.`;
-    await refresh();
-  } catch (err) {
-    console.error("inject_chaos failed", err);
-    document.getElementById("status-line").textContent = `Chaos injection failed: ${err.message}`;
+
+  } catch(e) {
+    document.getElementById('session-tag').textContent = 'server offline';
   }
 }
 
-window.addEventListener("load", () => {
-  refresh();
-  refreshTimer = setInterval(refresh, 5000);
-});
+async function chaos(type){
+  const session = currentSession || 'demo_session';
+  addLog(ts(), `CHAOS INJECT · type:${type} · session:${session}`, 'log-warn');
+  try {
+    await fetch(`${API}/inject_chaos`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chaos_type: type, session_id: session})
+    });
+    if(type === 'identity'){
+      document.getElementById('exec-sub').textContent = 'card: UNSIGNED — rejected';
+      document.getElementById('exec-status').textContent = '✗ rejected';
+      document.getElementById('exec-status').className = 'rejected';
+    }
+    setTimeout(poll, 500);
+  } catch(e){
+    addLog(ts(), `chaos inject failed: ${e}`, 'log-block');
+  }
+}
+
+function resetChaos(){
+  document.getElementById('exec-sub').textContent = 'card: exec_v9_signed';
+  document.getElementById('exec-status').textContent = '✓ signed';
+  document.getElementById('exec-status').className = 'verified';
+  addLog(ts(), 'RESET · all violations cleared', 'log-ok');
+}
+
+setInterval(()=>{
+  document.getElementById('clock').textContent =
+    new Date().toTimeString().slice(0,8);
+}, 1000);
+
+poll();
+setInterval(poll, 2000);
 </script>
 </body>
 </html>

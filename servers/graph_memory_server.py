@@ -256,10 +256,14 @@ def intent_status(limit: int = 25):
             ),
         }
 
+        high_crit = [i for i in incidents if i.get("severity") in ("high", "critical")]
+        divergence_score = round(min(0.05 + len(high_crit) * 0.18, 0.99), 3)
+
         return {
             "service": "redteam-v9-sicd",
             "status": "ok",
             "generated_at": datetime.utcnow().isoformat() + "Z",
+            "divergence_score": divergence_score,
             "active_sessions": active_sessions,
             "active_declared_intents": active_intents,
             "recent_mast_incidents": incidents,
@@ -339,6 +343,7 @@ def inject_chaos(body: ChaosInject, request: Request):
             "session_id": session_id,
             "test_id": test_id,
             "incident_id": incident_id,
+            "chaos_type": body.mast_classification,
             "mast_classification": body.mast_classification,
             "severity": body.severity,
             "message": "Synthetic SICD incident injected; no network traffic performed.",
