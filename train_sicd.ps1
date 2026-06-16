@@ -42,30 +42,19 @@ else {
     Write-Host "  PyTorch: $torch_check"
 }
 
-# Run training
+# Run two-stage training (Plan B base + Plan A fine-tune)
 Write-Host ""
-Write-Host "[3] Running train_encoder()..." -ForegroundColor Yellow
+Write-Host "[3] Running train_two_stage() — Plan B (CICIDS2017) then Plan A (corpus)..." -ForegroundColor Yellow
 & $python -c @"
 import sys
 sys.path.insert(0, '$root')
-from core.sicd_encoder import train_encoder, load_corpus, build_sequences, SEQ_LEN
+from core.sicd_encoder import train_two_stage, load_corpus, build_sequences
 
-corpus = load_corpus()
-print(f'Corpus entries: {len(corpus)}')
-
-seqs = build_sequences(corpus)
-print(f'Training sequences: {len(seqs)}')
-
-if len(seqs) < 10:
-    print('NOT ENOUGH DATA -- need at least 10 sequences of 16 tool calls.')
-    print(f'Current corpus has {len(corpus)} entries in {len(set(e.get(\"session_id\") for e in corpus))} sessions.')
-    print('Run more corpus engagements first.')
-    exit(1)
-
-model = train_encoder(epochs=40)
-if model is not None:
-    print('Training complete.')
-    print('Model saved: models/sicd_encoder.pt')
+entries = load_corpus()
+seqs = build_sequences(entries)
+print(f'Corpus: {len(entries)} entries, {len(seqs)} sequences')
+train_two_stage(planb_epochs=20, plana_epochs=40)
+print('Two-stage training complete.')
 "@
 
 if ($LASTEXITCODE -ne 0) {

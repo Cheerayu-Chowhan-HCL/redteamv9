@@ -126,7 +126,9 @@ def _audit_log(session_id: str, tool_name: str, params_summary: dict, result_sum
         "tool_name": tool_name,
         "parameters_summary": params_summary,
         "result_summary": result_summary[:200],
-        "session_phase": active_intent["phase"] if active_intent else None,
+        "session_phase": (active_intent.get("phase") or "unknown_phase")
+                         if active_intent else
+                         ("pre_intent" if session_id else None),
         "planner_intent": active_intent["intent"] if active_intent else None,
     }
     try:

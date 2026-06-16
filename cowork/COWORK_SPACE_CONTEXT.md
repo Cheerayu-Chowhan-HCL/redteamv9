@@ -541,3 +541,23 @@ generate_report(session_id)
 - Always call `kill_all_scans` after every async scan sequence
 - Never attack targets outside the defined session scope
 - The report HTML is sanitised — safe to share with stakeholders
+
+---
+
+## Corpus Engagement Targets
+
+Use these targets to generate SICD training data. Each produces a distinct
+`session_id` in SQLite and labelled entries in `logs/tool_audit.jsonl`.
+
+| Target | URL | Session prefix | Stack | Start file |
+|--------|-----|----------------|-------|------------|
+| AltoroJ (local) | `http://localhost:8080/altoromutual` | `v9_ctf_altoroj_` | Java/Tomcat | `START_altoro.md` |
+| AltoroJ (external) | `http://demo.testfire.net/` | `v9_ctf_testfire_` | Java/.NET | `START_external_testfire.md` |
+| Acuforum | `http://testasp.vulnweb.com/` | `v9_ctf_acuforum_` | PHP/MySQL | `START_acuforum.md` |
+
+**External targets** require mitmproxy running on port 8888 before starting:
+```
+mitmdump --mode regular --listen-port 8888
+```
+
+Run at least 10 engagements (mix of targets) before running `train_sicd.ps1`.

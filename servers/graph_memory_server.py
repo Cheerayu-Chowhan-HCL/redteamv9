@@ -256,8 +256,18 @@ def intent_status(limit: int = 25):
             ),
         }
 
-        high_crit = [i for i in incidents if i.get("severity") in ("high", "critical")]
-        divergence_score = round(min(0.05 + len(high_crit) * 0.18, 0.99), 3)
+        # Use trained SICD model if available; fall back to heuristic
+        _latest_sid = (active_sessions[0]["session_id"]
+                       if active_sessions else None)
+        try:
+            _ge = engine  # GraphEngine already initialised at module level
+            divergence_score = round(_ge.get_sicd_score(
+                _latest_sid, lookback=30), 3) if _latest_sid else 0.05
+        except Exception:
+            high_crit = [i for i in incidents
+                         if i.get("severity") in ("high", "critical")]
+            divergence_score = round(
+                min(0.05 + len(high_crit) * 0.18, 0.99), 3)
 
         return {
             "service": "redteam-v9-sicd",
