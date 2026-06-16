@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+venv/
+.env
+
+# Database — never commit live data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Logs and corpus — too large for git
+logs/tool_audit.jsonl
+logs/*.log
+
+# Reports — generated output
+reports/*.html
+reports/*.pdf
+
+# Secrets
+C:/Temp/rtv7_bearer.txt
+*.bearer.txt
+.env
+secrets.txt
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node
+node_modules/
+
+# Neo4j data
+neo4j_data/

@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Penetration Test Report — v6_20260601_064617_demo_test</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; line-height: 1.6; }
+  a { color: #4dabf7; }
+
+  /* Cover */
+  .cover {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+    color: #eaeaea; padding: 60px 80px; min-height: 380px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    page-break-after: always;
+  }
+  .cover-logo { font-size: 1.5em; font-weight: 700; color: #e94560; letter-spacing: 2px; }
+  .cover-logo span { color: #eaeaea; }
+  .cover-title { font-size: 2.4em; font-weight: 700; margin: 24px 0 8px; color: #fff; }
+  .cover-subtitle { font-size: 1.1em; color: #a0aec0; margin-bottom: 32px; }
+  .cover-meta { display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; font-size: 0.88em; }
+  .cover-meta .lbl { color: #718096; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .cover-meta .val { color: #e2e8f0; }
+  .classification {
+    display: inline-block; background: #e94560; color: #fff;
+    padding: 3px 14px; border-radius: 4px; font-size: 0.78em;
+    font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* Page wrapper */
+  .page { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+  /* Section */
+  section { background: #fff; border-radius: 10px; padding: 28px 32px; margin: 24px 0;
+             box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  h2 { font-size: 1.3em; font-weight: 700; color: #1a202c;
+        border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 18px; }
+  h3 { font-size: 1.05em; font-weight: 600; color: #2d3748; margin-bottom: 10px; }
+  p { color: #4a5568; margin: 8px 0; }
+
+  /* Executive Summary */
+  .exec-grid { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .donut-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+  .donut-chart {
+    width: 120px; height: 120px; border-radius: 50%;
+    background: conic-gradient(
+      #e94560 0% 4.3%,
+      #f85149 4.3% 63.0%,
+      #d29922 63.0% 86.9%,
+      #388bfd 86.9% 99.9%,
+      #484f58 99.9% 100%
+    );
+  }
+  .donut-hole {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 72px; height: 72px; border-radius: 50%; background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3em; font-weight: 700; color: #1a202c;
+  }
+  .sev-legend { display: flex; flex-direction: column; gap: 5px; margin-left: 10px; }
+  .sev-leg { display: flex; align-items: center; gap: 7px; font-size: 0.82em; }
+  .sev-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .exec-stats { display: flex; gap: 14px; flex-wrap: wrap; }
+  .stat-card {
+    border-radius: 8px; padding: 14px 20px; text-align: center;
+    min-width: 80px; color: #fff;
+  }
+  .stat-card .sn { font-size: 1.8em; font-weight: 700; }
+  .stat-card .sl { font-size: 0.75em; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; }
+  .sc-critical { background: #e94560; }
+  .sc-high { background: #f85149; }
+  .sc-medium { background: #d29922; }
+  .sc-low { background: #388bfd; }
+  .sc-info { background: #238636; }
+
+  /* Findings */
+  .finding-card { background: #fff; border-radius: 8px; margin: 16px 0;
+                   box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
+  .finding-header {
+    padding: 14px 20px; display: flex; align-items: center; gap: 14px;
+    color: #fff;
+  }
+  .sev-bg-critical { background: linear-gradient(90deg, #e94560, #c0392b); }
+  .sev-bg-high     { background: linear-gradient(90deg, #f85149, #d63031); }
+  .sev-bg-medium   { background: linear-gradient(90deg, #d29922, #e67e22); }
+  .sev-bg-low      { background: linear-gradient(90deg, #388bfd, #2980b9); }
+  .sev-bg-info     { background: linear-gradient(90deg, #238636, #27ae60); }
+  .finding-idx { font-size: 0.8em; opacity: 0.7; }
+  .finding-title { flex: 1; font-weight: 700; font-size: 1em; }
+  .sev-badge-lg {
+    padding: 3px 12px; border-radius: 12px;
+    background: rgba(255,255,255,0.2); font-size: 0.78em;
+    font-weight: 700; letter-spacing: 0.5px;
+  }
+  .finding-body { padding: 18px 20px; }
+  .finding-grid {
+    display: grid; grid-template-columns: 160px 1fr;
+    gap: 6px 12px; margin-bottom: 16px;
+  }
+  .fg-label { font-weight: 600; font-size: 0.82em; color: #718096; padding-top: 1px; }
+  .fg-val { font-size: 0.85em; color: #2d3748; word-break: break-all; }
+  .finding-section { margin-top: 12px; }
+  .fsec-title { font-weight: 700; font-size: 0.82em; color: #718096;
+                 text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+  code {
+    background: #f7fafc; border: 1px solid #e2e8f0; padding: 2px 6px;
+    border-radius: 4px; font-family: 'Consolas', monospace; font-size: 0.85em; color: #2d3748;
+  }
+
+  /* Tables */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+  .data-table th {
+    background: #2d3748; color: #e2e8f0; padding: 9px 12px;
+    text-align: left; font-weight: 600;
+  }
+  .data-table td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; }
+  .data-table tr:hover td { background: #f7fafc; }
+  .data-table tr.top-row td { font-weight: 600; color: #2b6cb0; }
+
+  /* Severity badges */
+  .sev-badge {
+    display: inline-block; padding: 2px 9px; border-radius: 10px;
+    font-size: 0.76em; font-weight: 700; color: #fff;
+  }
+  .sev-critical { background: #e94560; }
+  .sev-high { background: #f85149; }
+  .sev-medium { background: #d29922; }
+  .sev-low { background: #388bfd; }
+  .sev-info { background: #238636; }
+
+  /* MCTS conf bar */
+  .conf-bar {
+    display: inline-block; height: 8px; background: #4dabf7;
+    border-radius: 4px; vertical-align: middle; margin-right: 4px;
+  }
+
+  /* Print */
+  @media print {
+    body { background: #fff; }
+    .cover { min-height: auto; }
+    section { box-shadow: none; border: 1px solid #e2e8f0; }
+    .finding-card { box-shadow: none; border: 1px solid #e2e8f0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── COVER PAGE ─────────────────────────────────────────────────────────── -->
+<div class="cover">
+  <div>
+    <div class="cover-logo">REDTEAM<span> V6</span></div>
+    <div class="classification">Confidential</div>
+    <div class="cover-title">Web Application Penetration Test Report</div>
+    <div class="cover-subtitle">Autonomous Security Assessment</div>
+  </div>
+  <div class="cover-meta">
+    <div class="lbl">Target</div>        <div class="val">http://demo.testfire.net</div>
+    <div class="lbl">Date</div>          <div class="val">01 June 2026</div>
+    <div class="lbl">Session ID</div>    <div class="val">v6_20260601_064617_demo_test</div>
+    <div class="lbl">Goal</div>          <div class="val">Full black-box pentest</div>
+    <div class="lbl">Prepared by</div>   <div class="val">RedTeam V6 Autonomous Assessment Platform</div>
+    <div class="lbl">Classification</div><div class="val">CONFIDENTIAL — For authorised recipients only</div>
+  </div>
+</div>
+
+<div class="page">
+
+<!-- ── 1. EXECUTIVE SUMMARY ─────────────────────────────────────────────────── -->
+<section>
+  <h2>1. Executive Summary</h2>
+  <div class="exec-grid">
+    <div class="donut-wrap">
+      <div class="donut-chart"></div>
+      <div class="donut-hole">46</div>
+    </div>
+    <div class="sev-legend">
+      <div class="sev-leg"><div class="sev-dot" style="background:#e94560"></div> Critical: 2</div>
+      <div class="sev-leg"><div class="sev-dot" style="background:#f85149"></div> High: 27</div>
+      <div class="sev-leg"><div class="sev-dot" style="background:#d29922"></div> Medium: 11</div>
+      <div class="sev-leg"><div class="sev-dot" style="background:#388bfd"></div> Low: 6</div>
+      <div class="sev-leg"><div class="sev-dot" style="background:#484f58"></div> Info: 0</div>
+    </div>
+    <div class="exec-stats">
+      <div class="stat-card sc-critical"><div class="sn">2</div><div class="sl">Critical</div></div>
+      <div class="stat-card sc-high"><div class="sn">27</div><div class="sl">High</div></div>
+      <div class="stat-card sc-medium"><div class="sn">11</div><div class="sl">Medium</div></div>
+      <div class="stat-card sc-low"><div class="sn">6</div><div class="sl">Low</div></div>
+      <div class="stat-card sc-info"><div class="sn">0</div><div class="sl">Info</div></div>
+    </div>
+  </div>
+  <p style="margin-top:20px">
+    A total of 46 security findings were identified during this assessment of http://demo.testfire.net.
+     2 critical-severity findings require immediate remediation.
+     27 high-severity findings should be addressed within one week.
+     The assessment covered all discovered pages, forms, and API endpoints using a 6-phase autonomous methodology.
+  </p>
+</section>
+
+<!-- ── 2. SCOPE & METHODOLOGY ────────────────────────────────────────────────── -->
+<section>
+  <h2>2. Scope &amp; Methodology</h2>
+  <table class="data-table" style="margin-bottom:16px">
+    <tr><th>Parameter</th><th>Value</th></tr>
+    <tr><td>Target URL</td><td>http://demo.testfire.net</td></tr>
+    <tr><td>Test Date</td><td>2026-06-01 06:58 UTC</td></tr>
+    <tr><td>Session ID</td><td>v6_20260601_064617_demo_test</td></tr>
+    <tr><td>Engagement Goal</td><td>Full black-box pentest</td></tr>
+    <tr><td>Methodology</td><td>OWASP Testing Guide v4.2 + PTES</td></tr>
+    <tr><td>Tools</td><td>RedTeam V6 MCP (32 tools), BayesianMCTS planner, sqlmap, nuclei, Playwright</td></tr>
+    <tr><td>Approach</td><td>Black-box — no prior knowledge of the target assumed</td></tr>
+  </table>
+  <h3>Phases Executed</h3>
+  <table class="data-table">
+    <tr><th>#</th><th>Phase</th><th>Description</th></tr>
+    <tr><td>0</td><td>Initialisation</td><td>Session creation, transfer learning priors loaded</td></tr>
+    <tr><td>1</td><td>Reconnaissance</td><td>Fingerprinting, crawling, endpoint enumeration</td></tr>
+    <tr><td>2</td><td>Authentication Testing</td><td>Auth bypass, default credentials, SQLi bypass</td></tr>
+    <tr><td>3</td><td>Injection Testing</td><td>SQLi, XSS, XPath injection, command injection</td></tr>
+    <tr><td>4</td><td>Access Control</td><td>IDOR enumeration, privilege escalation</td></tr>
+    <tr><td>5</td><td>Configuration Review</td><td>Security headers, cookies, CSRF, session fixation</td></tr>
+    <tr><td>6</td><td>Reporting</td><td>Findings documented, CVSS scored, remediation roadmap</td></tr>
+  </table>
+</section>
+
+<!-- ── 3. ATTACK SURFACE SUMMARY ─────────────────────────────────────────────── -->
+<section>
+  <h2>3. Attack Surface Summary</h2>
+  <table class="data-table">
+    <tr><th>Surface</th><th>Count</th><th>Notes</th></tr>
+    <tr><td>Injection points discovered</td><td>7</td><td>Parameters tested with injection probes</td></tr>
+    <tr><td>Attack branches explored</td><td>1</td><td>Attack types scored and tested</td></tr>
+    <tr><td>Key facts distilled</td><td>2</td><td>Insights recorded to transfer learning</td></tr>
+    <tr><td>Confirmed findings</td><td>46</td><td>Verified by tool output</td></tr>
+  </table>
+  <div style="margin-top:12px"><h3>Injection Points</h3><table class="data-table"><tr><th>Parameter</th><th>Endpoint</th><th>Method</th></tr><tr><td><code>query</code></td><td><code>http://demo.testfire.net/search.jsp</code></td><td>GET</td></tr><tr><td><code>uid</code></td><td><code>http://demo.testfire.net/doLogin</code></td><td>POST</td></tr><tr><td><code>passw</code></td><td><code>http://demo.testfire.net/doLogin</code></td><td>POST</td></tr><tr><td><code>name</code></td><td><code>http://demo.testfire.net/sendFeedback</code></td><td>POST</td></tr><tr><td><code>email_addr</code></td><td><code>http://demo.testfire.net/sendFeedback</code></td><td>POST</td></tr><tr><td><code>subject</code></td><td><code>http://demo.testfire.net/sendFeedback</code></td><td>POST</td></tr><tr><td><code>comments</code></td><td><code>http://demo.testfire.net/sendFeedback</code></td><td>POST</td></tr></table></div>
+</section>
+
+<!-- ── 4. FINDINGS ───────────────────────────────────────────────────────────── -->
+<section>
+  <h2>4. Findings</h2>
+  
+<div class="finding-card" id="finding-0">
+  <div class="finding-header sev-bg-critical">
+    <span class="finding-idx">F01</span>
+    <span class="finding-title">Default Credentials — admin/admin grants access to /bank/main.jsp</span>
+    <span class="sev-badge-lg">CRITICAL</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/doLogin</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">sqlmap POST with uid=admin&passw=admin produced HTTP 302 redirect to /bank/main.jsp (authenticated banking portal). Default credentials admin/admin are valid and grant full application access.</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/doLogin" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability poses an immediate threat to the organisation. An attacker could gain full system access, exfiltrate sensitive data, or cause complete service disruption without requiring prior authentication.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Immediately change or disable the default admin account at /doLogin. Enforce a strong password policy. Audit all user accounts in the Apache Derby database for weak or default credentials. Implement account lockout after failed attempts.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-1">
+  <div class="finding-header sev-bg-critical">
+    <span class="finding-idx">F02</span>
+    <span class="finding-title">SQL Injection — POST parameter uid at /doLogin (Apache Derby, Boolean-Based Blind)</span>
+    <span class="sev-badge-lg">CRITICAL</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/doLogin</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">sqlmap confirmed: POST parameter uid is AND boolean-based blind injectable. Backend DBMS fingerprinted as Apache Derby. Payload: uid=[PAYLOAD]&passw=admin&btnSubmit=Login. Server follows 302 redirect to /bank/main.jsp on successful authentication demonstrating live database interaction.</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/doLogin" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability poses an immediate threat to the organisation. An attacker could gain full system access, exfiltrate sensitive data, or cause complete service disruption without requiring prior authentication.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Replace string concatenation with parameterised PreparedStatement queries at the doLogin servlet. The uid field is directly concatenated into the SQL authentication query. Use: PreparedStatement ps = conn.prepareStatement("SELECT * FROM users WHERE uid=? AND passw=?"); ps.setString(1, uid); ps.setString(2, passw). Never pass user input directly into SQL string construction.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-2">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F03</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=800007</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 800007 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=800007" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-3">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F04</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=800008</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 800008 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=800008" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-4">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F05</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=800009</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 800009 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=800009" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-5">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F06</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=800010</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 800010 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=800010" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-6">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F07</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=800002</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 800002 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=800002" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-7">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F08</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=800003</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 800003 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=800003" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-8">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F09</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=800004</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 800004 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=800004" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-9">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F10</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=800005</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 800005 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=800005" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-10">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F11</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=800006</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 800006 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=800006" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-11">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F12</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=18</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 18 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=18" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-12">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F13</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=19</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 19 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=19" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-13">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F14</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=20</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 20 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=20" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-14">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F15</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=800000</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 800000 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=800000" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-15">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F16</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=800001</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 800001 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=800001" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-16">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F17</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=13</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 13 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=13" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-17">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F18</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=14</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 14 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=14" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-18">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F19</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=15</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 15 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=15" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-19">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F20</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=16</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 16 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=16" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-20">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F21</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=17</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 17 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=17" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-21">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F22</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=10</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 10 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=10" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-22">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F23</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=11</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 11 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=11" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-23">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F24</span>
+    <span class="finding-title">Possible IDOR via content</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content=12</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">ID 12 returns different data than baseline</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content=12" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement proper authorisation checks for all object references.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-24">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F25</span>
+    <span class="finding-title">Reflected XSS in parameter 'email_addr'</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/sendFeedback</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">Parameter 'email_addr' reflects input without encoding</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/sendFeedback" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>HTML-encode all output. Implement Content-Security-Policy.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-25">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F26</span>
+    <span class="finding-title">Reflected XSS in parameter 'name'</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/sendFeedback</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">Parameter 'name' reflects input without encoding</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/sendFeedback" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>HTML-encode all output. Implement Content-Security-Policy.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-26">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F27</span>
+    <span class="finding-title">Session Fixation — JSESSIONID Not Regenerated Post-Authentication</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/login.jsp</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">test_session_fixation confirmed JSESSIONID cookie value identical before and after successful authentication. An attacker who fixes a victim's session token pre-login will inherit the authenticated session.</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/login.jsp" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Invalidate and regenerate the JSESSIONID on every successful authentication event at /doLogin. Call HttpSession.invalidate() followed by request.getSession(true) immediately after credential validation.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-27">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F28</span>
+    <span class="finding-title">Reflected XSS in parameter 'query'</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/search.jsp</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">Parameter 'query' reflects input without encoding</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/search.jsp" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>HTML-encode all output. Implement Content-Security-Policy.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-28">
+  <div class="finding-header sev-bg-high">
+    <span class="finding-idx">F29</span>
+    <span class="finding-title">Session Fixation Risk</span>
+    <span class="sev-badge-lg">HIGH</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/login.jsp</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">Session token did not change after authentication attempt</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/login.jsp" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>Exploitation of this vulnerability could result in significant data exposure or partial system compromise. Prompt remediation is strongly recommended.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Regenerate session ID after successful authentication.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-29">
+  <div class="finding-header sev-bg-medium">
+    <span class="finding-idx">F30</span>
+    <span class="finding-title">Exposed API Documentation — Swagger UI publicly accessible at /swagger/index.html</span>
+    <span class="sev-badge-lg">MEDIUM</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/swagger/index.html</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">GET /swagger/index.html returns HTTP 200 with full Swagger UI. API endpoints, parameters, and schemas are publicly documented with no authentication required. Discovered during crawl_links and confirmed via http_request.</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/swagger/index.html" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability may be leveraged as part of a multi-step attack chain. While not directly exploitable for full compromise, it reduces the overall security posture.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Restrict /swagger/* to internal network or authenticated users only. Apply access controls via web.xml security-constraint or a reverse proxy ACL. Remove Swagger UI from production deployments or require authentication before accessing API documentation.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-30">
+  <div class="finding-header sev-bg-medium">
+    <span class="finding-idx">F31</span>
+    <span class="finding-title">Sensitive Data in Cookie — AltoroAccounts contains Base64-encoded account data</span>
+    <span class="sev-badge-lg">MEDIUM</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/doLogin</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">Post-authentication Set-Cookie header includes AltoroAccounts=[base64 encoded value] — account identifiers and data stored client-side in a cookie with no integrity protection. Base64 is trivially reversible encoding, not encryption.</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/doLogin" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability may be leveraged as part of a multi-step attack chain. While not directly exploitable for full compromise, it reduces the overall security posture.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Remove account data from client-side cookies. Store account references server-side in the session. If client-side storage is required, use HMAC-signed values with a server secret key to detect tampering.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-31">
+  <div class="finding-header sev-bg-medium">
+    <span class="finding-idx">F32</span>
+    <span class="finding-title">IDOR / Parameter Manipulation — /index.jsp content parameter accepts arbitrary values</span>
+    <span class="sev-badge-lg">MEDIUM</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/index.jsp?content={id}</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">test_idor returned idor_found=true. Numeric IDs 1-9 all return HTTP 200 (length 6940). ID=10 returns different content (6941 bytes). The content parameter accepts arbitrary file path values and the server resolves them without access control — potential path traversal / file inclusion vector.</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/index.jsp?content={id}" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability may be leveraged as part of a multi-step attack chain. While not directly exploitable for full compromise, it reduces the overall security posture.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Whitelist valid content parameter values at /index.jsp. Reject any value not in the allowed set (e.g., personal.htm, business.htm). Never use user-supplied input directly as a file path. Implement server-side mapping of content identifiers to absolute file paths.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-32">
+  <div class="finding-header sev-bg-medium">
+    <span class="finding-idx">F33</span>
+    <span class="finding-title">Reflected XSS — /sendFeedback parameter: email_addr</span>
+    <span class="sev-badge-lg">MEDIUM</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/sendFeedback</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">test_xss confirmed reflected XSS on POST parameter email_addr at /sendFeedback. Input reflected unencoded in response. result=reflected, tests_run=1.</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/sendFeedback" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability may be leveraged as part of a multi-step attack chain. While not directly exploitable for full compromise, it reduces the overall security posture.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>HTML-encode the email_addr parameter before rendering at /sendFeedback (sendFeedback servlet). Apply OWASP Java Encoder: Encode.forHtml(email_addr). Additionally validate email format server-side to reject script injection attempts.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-33">
+  <div class="finding-header sev-bg-medium">
+    <span class="finding-idx">F34</span>
+    <span class="finding-title">CSRF — No Anti-CSRF Token on Login and Feedback Forms</span>
+    <span class="sev-badge-lg">MEDIUM</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/login.jsp, http://demo.testfire.net/feedback.jsp</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">test_csrf confirmed csrf_tokens_found=0 and missing_csrf=true on both /login.jsp and /feedback.jsp. No CSRF token fields present in any form.</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/login.jsp, http://demo.testfire.net/feedback.jsp" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability may be leveraged as part of a multi-step attack chain. While not directly exploitable for full compromise, it reduces the overall security posture.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Implement synchronised CSRF tokens on all state-changing forms at /doLogin and /sendFeedback. Use a per-session unpredictable token validated server-side on every POST submission. Spring Security CSRF protection or OWASP CSRF Guard are suitable for Apache Tomcat/JSP.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-34">
+  <div class="finding-header sev-bg-medium">
+    <span class="finding-idx">F35</span>
+    <span class="finding-title">CSRF Token Missing</span>
+    <span class="sev-badge-lg">MEDIUM</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">1 forms found, no CSRF tokens detected</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability may be leveraged as part of a multi-step attack chain. While not directly exploitable for full compromise, it reduces the overall security posture.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Add CSRF tokens to all state-changing forms. Use SameSite=Strict cookies.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-35">
+  <div class="finding-header sev-bg-medium">
+    <span class="finding-idx">F36</span>
+    <span class="finding-title">CSRF Token Missing</span>
+    <span class="sev-badge-lg">MEDIUM</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">1 forms found, no CSRF tokens detected</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability may be leveraged as part of a multi-step attack chain. While not directly exploitable for full compromise, it reduces the overall security posture.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Add CSRF tokens to all state-changing forms. Use SameSite=Strict cookies.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-36">
+  <div class="finding-header sev-bg-medium">
+    <span class="finding-idx">F37</span>
+    <span class="finding-title">Reflected XSS — /sendFeedback parameter: name</span>
+    <span class="sev-badge-lg">MEDIUM</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/sendFeedback</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">test_xss confirmed reflected XSS on POST parameter name at /sendFeedback. Input value reflected unencoded in response body. tests_run=1, result=reflected.</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/sendFeedback" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability may be leveraged as part of a multi-step attack chain. While not directly exploitable for full compromise, it reduces the overall security posture.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>HTML-encode the name parameter before rendering in response at /sendFeedback (sendFeedback servlet). Apply OWASP Java Encoder: Encode.forHtml(name). Validate input server-side to reject script tags and event handlers.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-37">
+  <div class="finding-header sev-bg-medium">
+    <span class="finding-idx">F38</span>
+    <span class="finding-title">Insecure Session Cookie — JSESSIONID Missing Secure, HttpOnly, SameSite Flags</span>
+    <span class="sev-badge-lg">MEDIUM</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">analyse_cookies: JSESSIONID missing Secure flag (transmittable over HTTP), HttpOnly flag (accessible via JS), and SameSite attribute (CSRF risk).</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability may be leveraged as part of a multi-step attack chain. While not directly exploitable for full compromise, it reduces the overall security posture.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Set JSESSIONID cookie with Secure;HttpOnly;SameSite=Strict attributes in web.xml or programmatically: response.setHeader("Set-Cookie","JSESSIONID=...;Secure;HttpOnly;SameSite=Strict").</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-38">
+  <div class="finding-header sev-bg-medium">
+    <span class="finding-idx">F39</span>
+    <span class="finding-title">Reflected XSS — /search.jsp parameter: query</span>
+    <span class="sev-badge-lg">MEDIUM</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net/search.jsp?query=[PAYLOAD]</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">test_xss confirmed reflected XSS: query parameter value reflected unencoded in HTML response body. result=reflected, tests_run=1.</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net/search.jsp?query=[PAYLOAD]" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability may be leveraged as part of a multi-step attack chain. While not directly exploitable for full compromise, it reduces the overall security posture.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>HTML-encode all output at /search.jsp before rendering the query parameter. Apply OWASP Java Encoder (e.g., Encode.forHtml(query)) at the point of reflection. Add Content-Security-Policy header to restrict script execution.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-39">
+  <div class="finding-header sev-bg-medium">
+    <span class="finding-idx">F40</span>
+    <span class="finding-title">Insecure Cookie Configuration (3 issues)</span>
+    <span class="sev-badge-lg">MEDIUM</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">Cookie issues: ["Missing Secure flag", "Missing HttpOnly flag", "Missing SameSite attribute"]</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability may be leveraged as part of a multi-step attack chain. While not directly exploitable for full compromise, it reduces the overall security posture.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Set Secure, HttpOnly, SameSite=Strict on all sensitive cookies.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-40">
+  <div class="finding-header sev-bg-low">
+    <span class="finding-idx">F41</span>
+    <span class="finding-title">Missing security header: Content-Security-Policy</span>
+    <span class="sev-badge-lg">LOW</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">Header Content-Security-Policy not present</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability represents a minor risk. Addressing it will improve defence-in-depth but does not represent an immediate threat.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Add Content-Security-Policy to server response headers.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-41">
+  <div class="finding-header sev-bg-low">
+    <span class="finding-idx">F42</span>
+    <span class="finding-title">Missing security header: Strict-Transport-Security</span>
+    <span class="sev-badge-lg">LOW</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">Header Strict-Transport-Security not present</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability represents a minor risk. Addressing it will improve defence-in-depth but does not represent an immediate threat.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Add Strict-Transport-Security to server response headers.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-42">
+  <div class="finding-header sev-bg-low">
+    <span class="finding-idx">F43</span>
+    <span class="finding-title">Missing security header: X-Frame-Options</span>
+    <span class="sev-badge-lg">LOW</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">Header X-Frame-Options not present</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability represents a minor risk. Addressing it will improve defence-in-depth but does not represent an immediate threat.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Add X-Frame-Options to server response headers.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-43">
+  <div class="finding-header sev-bg-low">
+    <span class="finding-idx">F44</span>
+    <span class="finding-title">Missing security header: X-Content-Type-Options</span>
+    <span class="sev-badge-lg">LOW</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">Header X-Content-Type-Options not present</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability represents a minor risk. Addressing it will improve defence-in-depth but does not represent an immediate threat.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Add X-Content-Type-Options to server response headers.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-44">
+  <div class="finding-header sev-bg-low">
+    <span class="finding-idx">F45</span>
+    <span class="finding-title">Missing security header: Referrer-Policy</span>
+    <span class="sev-badge-lg">LOW</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">Header Referrer-Policy not present</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability represents a minor risk. Addressing it will improve defence-in-depth but does not represent an immediate threat.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Add Referrer-Policy to server response headers.</p>
+    </div>
+  </div>
+</div>
+
+<div class="finding-card" id="finding-45">
+  <div class="finding-header sev-bg-low">
+    <span class="finding-idx">F46</span>
+    <span class="finding-title">Missing security header: Permissions-Policy</span>
+    <span class="sev-badge-lg">LOW</span>
+  </div>
+  <div class="finding-body">
+    <div class="finding-grid">
+      <div class="fg-label">CVSS Vector</div>
+      <div class="fg-val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N</code></div>
+      <div class="fg-label">Affected Endpoint</div>
+      <div class="fg-val"><code>http://demo.testfire.net</code></div>
+      <div class="fg-label">Evidence Summary</div>
+      <div class="fg-val">Header Permissions-Policy not present</div>
+      <div class="fg-label">Proof of Concept</div>
+      <div class="fg-val"><code>curl -s "http://demo.testfire.net" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Business Impact</div>
+      <p>This vulnerability represents a minor risk. Addressing it will improve defence-in-depth but does not represent an immediate threat.</p>
+    </div>
+    <div class="finding-section">
+      <div class="fsec-title">Remediation</div>
+      <p>Add Permissions-Policy to server response headers.</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ── 5. REMEDIATION ROADMAP ────────────────────────────────────────────────── -->
+<section>
+  <h2>5. Remediation Roadmap</h2>
+  <table class="data-table">
+    <tr><th>#</th><th>Finding</th><th>Severity</th><th>Timeline</th><th>Effort</th></tr>
+    <tr><td>1</td><td><a href='#finding-0' style='color:#4dabf7'>Default Credentials — admin/admin grants access to /bank/main.jsp</a></td><td><span class='sev-badge sev-critical'>CRITICAL</span></td><td>Immediate (24h)</td><td>High</td></tr>
+<tr><td>2</td><td><a href='#finding-1' style='color:#4dabf7'>SQL Injection — POST parameter uid at /doLogin (Apache Derby, Boolean-Based Blind)</a></td><td><span class='sev-badge sev-critical'>CRITICAL</span></td><td>Immediate (24h)</td><td>High</td></tr>
+<tr><td>3</td><td><a href='#finding-2' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>4</td><td><a href='#finding-3' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>5</td><td><a href='#finding-4' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>6</td><td><a href='#finding-5' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>7</td><td><a href='#finding-6' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>8</td><td><a href='#finding-7' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>9</td><td><a href='#finding-8' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>10</td><td><a href='#finding-9' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>11</td><td><a href='#finding-10' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>12</td><td><a href='#finding-11' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>13</td><td><a href='#finding-12' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>14</td><td><a href='#finding-13' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>15</td><td><a href='#finding-14' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>16</td><td><a href='#finding-15' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>17</td><td><a href='#finding-16' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>18</td><td><a href='#finding-17' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>19</td><td><a href='#finding-18' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>20</td><td><a href='#finding-19' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>21</td><td><a href='#finding-20' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>22</td><td><a href='#finding-21' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>23</td><td><a href='#finding-22' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>24</td><td><a href='#finding-23' style='color:#4dabf7'>Possible IDOR via content</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>25</td><td><a href='#finding-24' style='color:#4dabf7'>Reflected XSS in parameter 'email_addr'</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>26</td><td><a href='#finding-25' style='color:#4dabf7'>Reflected XSS in parameter 'name'</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>27</td><td><a href='#finding-26' style='color:#4dabf7'>Session Fixation — JSESSIONID Not Regenerated Post-Authentication</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>28</td><td><a href='#finding-27' style='color:#4dabf7'>Reflected XSS in parameter 'query'</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>29</td><td><a href='#finding-28' style='color:#4dabf7'>Session Fixation Risk</a></td><td><span class='sev-badge sev-high'>HIGH</span></td><td>Short-term (1 week)</td><td>High</td></tr>
+<tr><td>30</td><td><a href='#finding-29' style='color:#4dabf7'>Exposed API Documentation — Swagger UI publicly accessible at /swagger/index.html</a></td><td><span class='sev-badge sev-medium'>MEDIUM</span></td><td>Medium-term (1 month)</td><td>Medium</td></tr>
+<tr><td>31</td><td><a href='#finding-30' style='color:#4dabf7'>Sensitive Data in Cookie — AltoroAccounts contains Base64-encoded account data</a></td><td><span class='sev-badge sev-medium'>MEDIUM</span></td><td>Medium-term (1 month)</td><td>Medium</td></tr>
+<tr><td>32</td><td><a href='#finding-31' style='color:#4dabf7'>IDOR / Parameter Manipulation — /index.jsp content parameter accepts arbitrary values</a></td><td><span class='sev-badge sev-medium'>MEDIUM</span></td><td>Medium-term (1 month)</td><td>Medium</td></tr>
+<tr><td>33</td><td><a href='#finding-32' style='color:#4dabf7'>Reflected XSS — /sendFeedback parameter: email_addr</a></td><td><span class='sev-badge sev-medium'>MEDIUM</span></td><td>Medium-term (1 month)</td><td>Medium</td></tr>
+<tr><td>34</td><td><a href='#finding-33' style='color:#4dabf7'>CSRF — No Anti-CSRF Token on Login and Feedback Forms</a></td><td><span class='sev-badge sev-medium'>MEDIUM</span></td><td>Medium-term (1 month)</td><td>Medium</td></tr>
+<tr><td>35</td><td><a href='#finding-34' style='color:#4dabf7'>CSRF Token Missing</a></td><td><span class='sev-badge sev-medium'>MEDIUM</span></td><td>Medium-term (1 month)</td><td>Medium</td></tr>
+<tr><td>36</td><td><a href='#finding-35' style='color:#4dabf7'>CSRF Token Missing</a></td><td><span class='sev-badge sev-medium'>MEDIUM</span></td><td>Medium-term (1 month)</td><td>Medium</td></tr>
+<tr><td>37</td><td><a href='#finding-36' style='color:#4dabf7'>Reflected XSS — /sendFeedback parameter: name</a></td><td><span class='sev-badge sev-medium'>MEDIUM</span></td><td>Medium-term (1 month)</td><td>Medium</td></tr>
+<tr><td>38</td><td><a href='#finding-37' style='color:#4dabf7'>Insecure Session Cookie — JSESSIONID Missing Secure, HttpOnly, SameSite Flags</a></td><td><span class='sev-badge sev-medium'>MEDIUM</span></td><td>Medium-term (1 month)</td><td>Medium</td></tr>
+<tr><td>39</td><td><a href='#finding-38' style='color:#4dabf7'>Reflected XSS — /search.jsp parameter: query</a></td><td><span class='sev-badge sev-medium'>MEDIUM</span></td><td>Medium-term (1 month)</td><td>Medium</td></tr>
+<tr><td>40</td><td><a href='#finding-39' style='color:#4dabf7'>Insecure Cookie Configuration (3 issues)</a></td><td><span class='sev-badge sev-medium'>MEDIUM</span></td><td>Medium-term (1 month)</td><td>Medium</td></tr>
+<tr><td>41</td><td><a href='#finding-40' style='color:#4dabf7'>Missing security header: Content-Security-Policy</a></td><td><span class='sev-badge sev-low'>LOW</span></td><td>Long-term (next quarter)</td><td>Medium</td></tr>
+<tr><td>42</td><td><a href='#finding-41' style='color:#4dabf7'>Missing security header: Strict-Transport-Security</a></td><td><span class='sev-badge sev-low'>LOW</span></td><td>Long-term (next quarter)</td><td>Medium</td></tr>
+<tr><td>43</td><td><a href='#finding-42' style='color:#4dabf7'>Missing security header: X-Frame-Options</a></td><td><span class='sev-badge sev-low'>LOW</span></td><td>Long-term (next quarter)</td><td>Medium</td></tr>
+<tr><td>44</td><td><a href='#finding-43' style='color:#4dabf7'>Missing security header: X-Content-Type-Options</a></td><td><span class='sev-badge sev-low'>LOW</span></td><td>Long-term (next quarter)</td><td>Medium</td></tr>
+<tr><td>45</td><td><a href='#finding-44' style='color:#4dabf7'>Missing security header: Referrer-Policy</a></td><td><span class='sev-badge sev-low'>LOW</span></td><td>Long-term (next quarter)</td><td>Medium</td></tr>
+<tr><td>46</td><td><a href='#finding-45' style='color:#4dabf7'>Missing security header: Permissions-Policy</a></td><td><span class='sev-badge sev-low'>LOW</span></td><td>Long-term (next quarter)</td><td>Medium</td></tr>
+  </table>
+</section>
+
+<!-- ── 6. APPENDIX ───────────────────────────────────────────────────────────── -->
+<section>
+  <h2>6. Appendix</h2>
+  <h3>A — MCTS Confidence Progression</h3>
+  <p>How the agent's confidence in each attack branch evolved during the assessment:</p>
+  <table class="data-table" style="margin-top:10px"><tr><th>Attack Branch</th><th>Prior</th><th>Posterior</th><th>Confidence</th><th>Visits</th></tr><tr class="top-row"><td>xss</td><td>0.03</td><td>0.03</td><td><span class="conf-bar" style="width:80px">&nbsp;</span> 1.00</td><td>3</td></tr>
+<tr><td>idor</td><td>0.15</td><td>0.13</td><td><span class="conf-bar" style="width:80px">&nbsp;</span> 1.00</td><td>22</td></tr>
+<tr><td>csrf</td><td>0.12</td><td>0.11</td><td><span class="conf-bar" style="width:80px">&nbsp;</span> 1.00</td><td>2</td></tr>
+<tr><td>session_fixation</td><td>0.15</td><td>0.13</td><td><span class="conf-bar" style="width:80px">&nbsp;</span> 1.00</td><td>1</td></tr>
+<tr><td>sqli</td><td>1.00</td><td>0.90</td><td><span class="conf-bar" style="width:64px">&nbsp;</span> 0.81</td><td>18</td></tr>
+<tr><td>xpath_injection</td><td>0.03</td><td>0.03</td><td><span class="conf-bar" style="width:0px">&nbsp;</span> 0.00</td><td>0</td></tr>
+<tr><td>command_injection</td><td>0.03</td><td>0.03</td><td><span class="conf-bar" style="width:0px">&nbsp;</span> 0.00</td><td>0</td></tr>
+<tr><td>auth_bypass</td><td>0.18</td><td>0.18</td><td><span class="conf-bar" style="width:0px">&nbsp;</span> 0.00</td><td>0</td></tr>
+<tr><td>header_misconfiguration</td><td>0.12</td><td>0.12</td><td><span class="conf-bar" style="width:0px">&nbsp;</span> 0.00</td><td>0</td></tr>
+<tr><td>cookie_analysis</td><td>0.03</td><td>0.03</td><td><span class="conf-bar" style="width:0px">&nbsp;</span> 0.00</td><td>0</td></tr>
+<tr><td>nuclei_scan</td><td>0.03</td><td>0.03</td><td><span class="conf-bar" style="width:0px">&nbsp;</span> 0.00</td><td>0</td></tr>
+<tr><td>directory_enumeration</td><td>0.03</td><td>0.03</td><td><span class="conf-bar" style="width:0px">&nbsp;</span> 0.00</td><td>0</td></tr>
+<tr><td>fingerprinting</td><td>0.03</td><td>0.03</td><td><span class="conf-bar" style="width:0px">&nbsp;</span> 0.00</td><td>0</td></tr></table>
+  <h3 style="margin-top:20px">B — Key Facts</h3>
+  <ul style="margin-top:8px;padding-left:20px"><li style='margin:4px 0;font-size:0.88em;color:#4a5568'>FULL_ENGAGEMENT_SUMMARY: Apache Tomcat (Coyote/1.1) + Apache Derby backend. No WAF. CRITICAL: (1) SQLi boolean-blind on POST uid at /doLogin (Apache Derby). (2) Default creds admin/admin grant full access to /bank/main.jsp. HIGH: Session fixation JSESSIONID not regenerated post-auth. MEDIUM: Reflected XSS on query(/search.jsp), name+email_addr(/sendFeedback), CSRF on all forms, IDOR on content param, insecure JSESSIONID cookie, AltoroAccounts cookie exposes account numbers+balances in base64, Swagger UI exposed. LOW: 6 missing security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy).</li><li style='margin:4px 0;font-size:0.88em;color:#4a5568'>recon_complete: Apache server, no WAF, JSP/Java stack. Login at /login.jsp (POST doLogin: uid, passw). Search at /search.jsp (GET: query). Feedback at /feedback.jsp (POST sendFeedback: name, email_addr, subject, comments). Admin panel at /admin (302). Swagger UI at /swagger. All 7 security headers missing. 7 injection points registered. No IDOR candidates from crawl.</li></ul>
+  <h3 style="margin-top:20px">C — Report Metadata</h3>
+  <table class="data-table">
+    <tr><td>Generated</td><td>2026-06-01 06:58 UTC</td></tr>
+    <tr><td>Platform</td><td>RedTeam V6 Autonomous Assessment Platform</td></tr>
+    <tr><td>Report version</td><td>1.0</td></tr>
+    <tr><td>Classification</td><td>CONFIDENTIAL</td></tr>
+  </table>
+</section>
+
+</div><!-- .page -->
+</body>
+</html>

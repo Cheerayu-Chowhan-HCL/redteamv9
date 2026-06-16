@@ -1,0 +1,913 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RedTeam V9 — Live Attack DAG</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; background: #0d1117; color: #e6edf3; }
+
+/* ── TOP BAR ────────────────────────────────────────────────── */
+#topbar {
+  height: 46px; background: #161b22; border-bottom: 1px solid #30363d;
+  display: flex; align-items: center; gap: 12px; padding: 0 14px;
+  flex-shrink: 0; overflow: hidden;
+}
+#topbar-title { color: #58a6ff; font-size: 1.05em; font-weight: bold; white-space: nowrap; }
+#session-select {
+  background: #21262d; border: 1px solid #30363d; color: #e6edf3;
+  padding: 3px 8px; border-radius: 6px; font-size: 0.82em; max-width: 260px;
+}
+.stat-pill {
+  background: #21262d; border: 1px solid #30363d; padding: 2px 9px;
+  border-radius: 11px; font-size: 0.78em; white-space: nowrap;
+}
+.stat-pill span { color: #58a6ff; font-weight: bold; }
+.tb-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.tb-btn {
+  background: #21262d; border: 1px solid #30363d; color: #e6edf3;
+  padding: 4px 11px; border-radius: 6px; font-size: 0.8em; cursor: pointer;
+}
+.tb-btn:hover { background: #30363d; }
+.tb-btn.report { background: #1f6feb22; border-color: #1f6feb; color: #58a6ff; }
+#last-updated { font-size: 0.75em; color: #8b949e; white-space: nowrap; }
+
+/* ── BODY LAYOUT ───────────────────────────────────────────── */
+#body-layout {
+  display: flex; height: calc(100vh - 46px - 38px);
+}
+
+/* ── LEFT SIDEBAR ───────────────────────────────────────────── */
+#sidebar {
+  width: 180px; flex-shrink: 0; background: #0d1117;
+  border-right: 1px solid #30363d; display: flex; flex-direction: column;
+  overflow: hidden;
+}
+#sidebar-header {
+  background: #161b22; padding: 7px 10px; font-size: 0.78em;
+  font-weight: bold; color: #8b949e; border-bottom: 1px solid #30363d;
+  flex-shrink: 0;
+}
+#session-list { overflow-y: auto; flex: 1; }
+.session-item {
+  padding: 7px 10px; font-size: 0.78em; cursor: pointer;
+  border-bottom: 1px solid #21262d; line-height: 1.4;
+}
+.session-item:hover { background: #21262d; }
+.session-item.active { background: #1f6feb22; border-left: 3px solid #1f6feb; }
+.session-item .sid { color: #58a6ff; font-weight: bold; }
+.session-item .starget { color: #8b949e; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── CENTER CANVAS ──────────────────────────────────────────── */
+#center {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  position: relative;
+}
+#attack-canvas {
+  flex: 1;
+  height: calc(100vh - 130px);
+  min-height: 500px;
+  width: 100%;
+  position: relative;
+  background: #0d1117;
+}
+#no-session-msg {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  text-align: center; color: #484f58;
+}
+#no-session-msg h2 { font-size: 1.1em; margin-bottom: 8px; }
+#no-session-msg p { font-size: 0.82em; }
+
+/* ── THINKING MINI-VIEW ─────────────────────────────────────── */
+#thinking-bar {
+  border-top: 1px solid #30363d; background: #0d1117; flex-shrink: 0;
+}
+#thinking-toggle {
+  background: none; border: none; color: #8b949e; padding: 5px 12px;
+  font-size: 0.78em; cursor: pointer; width: 100%; text-align: left;
+}
+#thinking-toggle:hover { color: #e6edf3; }
+#thinking-flow {
+  display: none; overflow-x: auto; padding: 8px 12px;
+  display: none; gap: 8px; align-items: center; min-height: 48px;
+  flex-wrap: nowrap;
+}
+.think-node {
+  flex-shrink: 0; border-radius: 6px; padding: 4px 9px;
+  font-size: 0.72em; max-width: 140px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+  border: 1px solid rgba(255,255,255,0.1); cursor: default;
+}
+.think-arrow { color: #30363d; font-size: 1em; flex-shrink: 0; }
+
+/* ── RIGHT PANEL ────────────────────────────────────────────── */
+#right-panel {
+  width: 340px; flex-shrink: 0; border-left: 1px solid #30363d;
+  display: flex; flex-direction: column; background: #0d1117;
+}
+#rp-tabs {
+  background: #161b22; border-bottom: 1px solid #30363d;
+  display: flex; flex-shrink: 0;
+}
+.rp-tab {
+  background: none; border: none; color: #8b949e; padding: 8px 14px;
+  font-size: 0.82em; cursor: pointer; border-bottom: 2px solid transparent;
+}
+.rp-tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+#rp-content { flex: 1; overflow-y: auto; padding: 10px 12px; }
+
+/* Agent Log */
+.log-entry {
+  padding: 7px 0; border-bottom: 1px solid #21262d; font-size: 0.78em;
+}
+.log-meta { display: flex; gap: 6px; align-items: center; margin-bottom: 3px; flex-wrap: wrap; }
+.log-type-badge {
+  padding: 1px 7px; border-radius: 10px; font-size: 0.85em;
+  font-weight: bold; color: #fff; flex-shrink: 0;
+}
+.log-step { color: #58a6ff; font-size: 0.88em; }
+.log-time { color: #484f58; font-size: 0.85em; margin-left: auto; }
+.log-text { color: #c9d1d9; line-height: 1.4; margin-top: 2px; }
+.log-conf { color: #6e40c9; font-size: 0.85em; margin-top: 2px; }
+
+/* Vulns tab */
+.vuln-card {
+  background: #161b22; border-radius: 6px; padding: 9px 11px;
+  margin-bottom: 8px; border-left: 3px solid;
+}
+.vuln-card.critical { border-left-color: #da3633; }
+.vuln-card.high { border-left-color: #f85149; }
+.vuln-card.medium { border-left-color: #d29922; }
+.vuln-card.low { border-left-color: #388bfd; }
+.vuln-title { font-weight: bold; font-size: 0.85em; }
+.vuln-meta { font-size: 0.75em; color: #8b949e; margin-top: 3px; }
+.sev-badge {
+  display: inline-block; padding: 1px 7px; border-radius: 10px;
+  font-size: 0.78em; font-weight: bold; color: #fff; margin-right: 5px;
+}
+.sev-critical { background: #da3633; }
+.sev-high { background: #f85149; }
+.sev-medium { background: #d29922; }
+.sev-low { background: #388bfd; }
+.sev-info { background: #238636; }
+
+/* MCTS table */
+.mcts-table { width: 100%; border-collapse: collapse; font-size: 0.78em; }
+.mcts-table th {
+  background: #161b22; padding: 5px 7px;
+  border-bottom: 1px solid #30363d; text-align: left; color: #8b949e;
+}
+.mcts-table td { padding: 4px 7px; border-bottom: 1px solid #21262d; }
+.mcts-table tr.top-row { background: #1f6feb11; }
+.mcts-table tr.top-row td { color: #58a6ff; font-weight: bold; }
+
+/* ── BOTTOM BAR ─────────────────────────────────────────────── */
+#bottombar {
+  height: 38px; background: #161b22; border-top: 1px solid #30363d;
+  display: flex; align-items: center; padding: 0 14px; gap: 6px;
+  flex-wrap: nowrap; overflow: hidden; flex-shrink: 0;
+}
+#bottombar-label { font-size: 0.75em; color: #8b949e; flex-shrink: 0; }
+#chips-container { display: flex; gap: 5px; flex-wrap: nowrap; overflow: hidden; }
+.vuln-chip {
+  padding: 2px 9px; border-radius: 10px; font-size: 0.75em;
+  font-weight: bold; color: #fff; white-space: nowrap;
+  max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── D3 graph styles ────────────────────────────────────────────── */
+@keyframes vulnPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+.vuln-node          { animation: vulnPulse 1.8s ease-in-out infinite; }
+.vuln-node-critical { animation: vulnPulse 1.2s ease-in-out infinite; }
+#attack-canvas svg  { display: block; }
+.node-group         { cursor: pointer; }
+.edge               { pointer-events: none; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <span id="topbar-title">🔴 RedTeam V9 — Live Attack DAG</span>
+  <select id="session-select" onchange="selectSession(this.value)">
+    <option value="">— select session —</option>
+  </select>
+  <div class="stat-pill">Nodes: <span id="stat-nodes">0</span></div>
+  <div class="stat-pill">Branches: <span id="stat-branches">0</span></div>
+  <div class="stat-pill">Vulns: <span id="stat-vulns">0</span></div>
+  <div class="stat-pill">Facts: <span id="stat-facts">0</span></div>
+  <div class="tb-right">
+    <span id="last-updated">⟳ Connecting…</span>
+    <button class="tb-btn" onclick="manualRefresh()">⟳ Refresh</button>
+    <button class="tb-btn" onclick="resetZoom()">⊙ Reset</button>
+    <button class="tb-btn report" id="report-btn" onclick="openReport()" style="display:none">📄 Report</button>
+  </div>
+</div>
+
+<!-- BODY LAYOUT -->
+<div id="body-layout">
+
+  <!-- LEFT SIDEBAR -->
+  <div id="sidebar">
+    <div id="sidebar-header">Sessions</div>
+    <div id="session-list"><div style="padding:10px;color:#484f58;font-size:0.8em">Loading…</div></div>
+  </div>
+
+  <!-- CENTER -->
+  <div id="center">
+    <div id="attack-canvas">
+      <div id="no-session-msg">
+        <h2>🔴 RedTeam V9</h2>
+        <p>Select a session from the sidebar<br>to view the live attack graph.</p>
+      </div>
+    </div>
+
+    <!-- THINKING MINI-VIEW -->
+    <div id="thinking-bar">
+      <button id="thinking-toggle" onclick="toggleThinking()">💭 Thinking DAG  ▶</button>
+      <div id="thinking-flow"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+    <div id="rp-tabs">
+      <button class="rp-tab active" onclick="switchTab('log',this)">Agent Log</button>
+      <button class="rp-tab" onclick="switchTab('vulns',this)">Vulns</button>
+      <button class="rp-tab" onclick="switchTab('mcts',this)">MCTS</button>
+    </div>
+    <div id="rp-content">
+      <div id="tab-log"><p style="color:#484f58;font-size:0.82em">No session selected.</p></div>
+      <div id="tab-vulns" style="display:none"><p style="color:#484f58;font-size:0.82em">No findings yet.</p></div>
+      <div id="tab-mcts" style="display:none"><p style="color:#484f58;font-size:0.82em">No MCTS data.</p></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM BAR -->
+<div id="bottombar">
+  <span id="bottombar-label">Confirmed findings:</span>
+  <div id="chips-container"><span style="color:#484f58;font-size:0.8em">None</span></div>
+</div>
+
+<script>
+const GRAPH_URL = 'http://localhost:6037';
+const REPORTS_BASE = 'http://localhost:6081/../reports/';  // served from same server
+
+let currentSession = '';
+// ── D3 state ──────────────────────────────────────────────────────────────────
+let _svg = null, _g = null, _zoom = null, _sim = null;
+let _svgW = 800, _svgH = 600;
+let _nodePositions = {};
+let _existingNodeIds = new Set();
+let _existingEdgeIds = new Set();
+let refreshTimer = null;
+let thinkingVisible = false;
+let currentTab = 'log';
+
+// ── Colors ────────────────────────────────────────────────────────────────────
+
+const BRANCH_COLOR = {
+  recon:            '#58a6ff',
+  auth_bypass:      '#e3b341',
+  sqli:             '#f85149',
+  xss:              '#f0883e',
+  idor:             '#a371f7',
+  csrf:             '#39d353',
+  session_fixation: '#79c0ff',
+  xpath_injection:  '#f9c513',
+  headers:          '#8b949e',
+  cookies:          '#6e40c9',
+  nuclei_scan:      '#a5d6ff',
+  fingerprinting:   '#58a6ff',
+  config_review:    '#8b949e',
+  default:          '#8b949e',
+};
+
+const SEV_COLORS = {
+  critical: '#da3633',
+  high:     '#f85149',
+  medium:   '#d29922',
+  low:      '#388bfd',
+  info:     '#238636',
+};
+
+const CONF_COLORS = c =>
+  c >= 0.8 ? '#238636' : c >= 0.5 ? '#9e6a03' : c >= 0.2 ? '#6e40c9' : '#484f58';
+
+const TYPE_INFO = {
+  hypothesis: { label: 'HYPOTHESIS', bg: '#1f6feb' },
+  observation: { label: 'OBSERVED',   bg: '#484f58' },
+  decision:    { label: 'DECIDED',    bg: '#9e6a03' },
+  failure:     { label: 'FAILED',     bg: '#da3633' },
+  insight:     { label: 'INSIGHT',    bg: '#238636' },
+};
+
+// ── Custom tooltip (replaces vis.js built-in title rendering) ─────────────────
+
+let _nodeRawData = {};  // nodeId -> raw API node object
+let _tooltipEl = null;
+
+function _ensureTooltip() {
+  if (_tooltipEl) return _tooltipEl;
+  _tooltipEl = document.createElement('div');
+  _tooltipEl.style.cssText =
+    'position:fixed;z-index:9999;pointer-events:none;opacity:0;' +
+    'transition:opacity 0.15s;background:#161b22;border:1px solid #30363d;' +
+    'padding:10px 12px;border-radius:8px;font-size:12px;' +
+    'max-width:240px;color:#e6edf3;line-height:1.5;';
+  document.body.appendChild(_tooltipEl);
+  return _tooltipEl;
+}
+
+function _buildTooltipContent(d) {
+  const t   = d.node_type || '';
+  const sev = (d.severity || '').toLowerCase();
+  const sc  = SEV_COLORS[sev] || '#8b949e';
+  let h = `<div style="font-weight:bold;margin-bottom:6px;color:${sc}">${t}</div>`;
+
+  if (t === 'SessionRoot') {
+    h += `<div>Target: ${(d.description || d.label || '').substring(0, 80)}</div>`;
+  } else if (t === 'AttackBranch') {
+    h += `<div>Phase: <b>${(d.label || '').toUpperCase()}</b></div>`;
+    if (d.description) h += `<div style="color:#8b949e;margin-top:3px">${d.description.substring(0, 80)}</div>`;
+  } else if (t === 'ConfirmedVulnerability') {
+    h += `<div style="color:${sc};font-weight:bold">${sev.toUpperCase()}</div>`;
+    h += `<div style="margin:4px 0">${(d.label || '').substring(0, 60)}</div>`;
+    if (d.description) h += `<div style="color:#8b949e;font-size:11px">${d.description.substring(0, 100)}</div>`;
+  } else if (t === 'InjectionPoint') {
+    const param = (d.label || '').replace('Injectable: ', '');
+    h += `<div>Param: <code style="color:#d29922">${param}</code></div>`;
+    if (d.description) h += `<div style="color:#8b949e;font-size:11px;margin-top:3px">${d.description.substring(0, 80)}</div>`;
+  } else {
+    h += `<div>${(d.label || '').substring(0, 60)}</div>`;
+    if (d.description) h += `<div style="color:#8b949e;font-size:11px;margin-top:3px">${d.description.substring(0, 80)}</div>`;
+  }
+  if (d.confidence !== undefined) {
+    h += `<div style="color:#8b949e;font-size:11px;margin-top:4px">Confidence: ${(d.confidence * 100).toFixed(0)}%</div>`;
+  }
+  return h;
+}
+
+// ── D3 helper functions ───────────────────────────────────────────────────────
+
+function nodeRadius(d) {
+  switch (d.node_type || d.type) {
+    case 'SessionRoot':            return 36;
+    case 'AttackBranch':           return 24;
+    case 'ConfirmedVulnerability': return 20;
+    case 'InjectionPoint':         return 10;
+    case 'Evidence':               return 8;
+    default:                       return 8;
+  }
+}
+
+function nodeColor(d) {
+  const t = d.node_type || d.type || '';
+  if (t === 'SessionRoot') return '#1f6feb';
+  if (t === 'AttackBranch') {
+    const k = (d.label || d.attack_type || '').toLowerCase();
+    return BRANCH_COLOR[k] || BRANCH_COLOR.default;
+  }
+  if (t === 'ConfirmedVulnerability')
+    return SEV_COLORS[(d.severity || '').toLowerCase()] || SEV_COLORS.info;
+  if (t === 'InjectionPoint') return '#e3b341';
+  if (t === 'Evidence')       return '#3fb950';
+  return '#8b949e';
+}
+
+function _edgeStroke(e, nodeMap) {
+  const tgtId = (typeof e.target === 'object')
+    ? (e.target?.node_id ?? e.target?.id)
+    : (e.target ?? e.target_id);
+  const tgt = nodeMap[tgtId];
+  const lbl = e.type || e.label || '';
+  if (lbl === 'HAS_FINDING') {
+    const sev = (tgt?.severity || 'medium').toLowerCase();
+    return SEV_COLORS[sev] || '#da3633';
+  }
+  if (lbl === 'HAS_BRANCH') return '#30363d';
+  return '#21262d';
+}
+
+function hoverNode(event, d) {
+  const tt = _ensureTooltip();
+  tt.innerHTML = _buildTooltipContent(d);
+  tt.style.opacity = '1';
+  tt.style.left = (event.pageX + 14) + 'px';
+  tt.style.top  = (event.pageY - 10) + 'px';
+}
+
+function blurNode() {
+  const tt = _ensureTooltip();
+  if (tt) tt.style.opacity = '0';
+}
+
+function initNodePositions(nodes) {
+  const branches = nodes.filter(n => (n.node_type || n.type) === 'AttackBranch');
+  nodes.forEach(n => {
+    if ((n.node_type || n.type) === 'SessionRoot') { n.fx = 0; n.fy = 0; }
+  });
+  branches.forEach((n, i) => {
+    if (!_nodePositions[n.node_id || n.id]) {
+      const angle = (2 * Math.PI * i) / Math.max(branches.length, 1);
+      n.x = 200 * Math.cos(angle);
+      n.y = 200 * Math.sin(angle);
+    }
+  });
+  // Restore saved positions from previous renders
+  nodes.forEach(n => {
+    const saved = _nodePositions[n.node_id || n.id];
+    if (saved && (n.node_type || n.type) !== 'SessionRoot') {
+      n.x = saved.x; n.y = saved.y;
+    }
+  });
+}
+
+function initGraph(container) {
+  container.querySelectorAll('svg').forEach(s => s.remove());
+  _svgW = container.offsetWidth  || 800;
+  _svgH = container.offsetHeight || 600;
+
+  _svg = d3.select(container).append('svg')
+    .attr('width',  _svgW)
+    .attr('height', _svgH)
+    .style('display', 'block');
+
+  const defs = _svg.append('defs');
+
+  // Glow filter for ConfirmedVulnerability nodes
+  const filt = defs.append('filter')
+    .attr('id', 'glow-vuln')
+    .attr('x', '-50%').attr('y', '-50%')
+    .attr('width', '200%').attr('height', '200%');
+  filt.append('feGaussianBlur').attr('stdDeviation', 4).attr('result', 'coloredBlur');
+  const merge = filt.append('feMerge');
+  merge.append('feMergeNode').attr('in', 'coloredBlur');
+  merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  // Arrowhead marker
+  defs.append('marker')
+    .attr('id', 'arrowhead')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 22).attr('refY', 0)
+    .attr('markerWidth', 6).attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', '#30363d');
+
+  _zoom = d3.zoom()
+    .scaleExtent([0.08, 4])
+    .on('zoom', e => _g.attr('transform', e.transform));
+  _svg.call(_zoom);
+
+  _g = _svg.append('g');
+
+  // Initial view: centered, slightly zoomed out
+  _svg.call(_zoom.transform,
+    d3.zoomIdentity.translate(_svgW / 2, _svgH / 2).scale(0.75));
+
+  _sim = d3.forceSimulation()
+    .force('link',    d3.forceLink().id(d => d.node_id || d.id).distance(140).strength(0.6))
+    .force('charge',  d3.forceManyBody().strength(-600))
+    .force('collide', d3.forceCollide().radius(d => nodeRadius(d) + 12))
+    .force('center',  d3.forceCenter(0, 0))
+    .alphaDecay(0.015)
+    .velocityDecay(0.3);
+}
+
+function clearGraph() {
+  if (_sim) { _sim.stop(); _sim = null; }
+  if (_svg) { _svg.remove(); _svg = null; }
+  _g = null; _zoom = null;
+  _nodePositions   = {};
+  _existingNodeIds = new Set();
+  _existingEdgeIds = new Set();
+}
+
+function resetZoom() {
+  if (_svg && _zoom) {
+    _svg.transition().duration(600).call(
+      _zoom.transform,
+      d3.zoomIdentity.translate(_svgW / 2, _svgH / 2).scale(0.75)
+    );
+  }
+}
+
+function renderGraph(data) {
+  const nodes    = (data.attack_dag?.nodes || []).map(n => ({ ...n }));
+  const rawEdges = data.attack_dag?.edges || [];
+
+  // Build id → node lookup (used for edge colour + tick handler fallback)
+  const nodeMap = {};
+  nodes.forEach(n => { nodeMap[n.node_id || n.id] = n; });
+
+  // Normalise edge fields: API may return source/target OR source_id/target_id
+  const edges = rawEdges.map((e, i) => ({
+    ...e,
+    _eid:   e.id || `e_${e.source ?? e.source_id}_${e.target ?? e.target_id}_${i}`,
+    source: e.source ?? e.source_id,
+    target: e.target ?? e.target_id,
+    type:   e.type   ?? e.label ?? 'leads_to',
+  })).filter(e => nodeMap[
+    typeof e.source === 'object' ? (e.source?.node_id ?? e.source?.id) : e.source
+  ] && nodeMap[
+    typeof e.target === 'object' ? (e.target?.node_id ?? e.target?.id) : e.target
+  ]);
+
+  initNodePositions(nodes);
+
+  // ── Edge layer (below nodes) ──────────────────────────────────
+  _g.selectAll('.edge-layer').data([0]).join('g').attr('class', 'edge-layer');
+  const edgeSel = _g.select('.edge-layer').selectAll('.edge')
+    .data(edges, d => d._eid)
+    .join(
+      enter => enter.append('line')
+        .attr('class', 'edge')
+        .attr('stroke', d => _edgeStroke(d, nodeMap))
+        .attr('stroke-width', d => d.type === 'HAS_FINDING' ? 2 : 1)
+        .attr('stroke-dasharray', d =>
+          (d.type === 'HAS_BRANCH' || d.type === 'HAS_ATTEMPT' || d.type === 'HAS_FINDING')
+            ? 'none' : '4,4')
+        .attr('marker-end', 'url(#arrowhead)')
+        .attr('opacity', 0.7),
+      update => update.attr('stroke', d => _edgeStroke(d, nodeMap)),
+      exit   => exit.remove()
+    );
+
+  // ── Node layer (above edges) ──────────────────────────────────
+  _g.selectAll('.node-layer').data([0]).join('g').attr('class', 'node-layer');
+  const nodeSel = _g.select('.node-layer').selectAll('.node-group')
+    .data(nodes, d => d.node_id || d.id)
+    .join(
+      enter => {
+        const grp = enter.append('g').attr('class', 'node-group')
+          .call(d3.drag()
+            .on('start', (ev, d) => {
+              if (!ev.active) _sim.alphaTarget(0.3).restart();
+              d.fx = d.x; d.fy = d.y;
+            })
+            .on('drag',  (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+            .on('end',   (ev, d) => {
+              if (!ev.active) _sim.alphaTarget(0);
+              if ((d.node_type || d.type) !== 'SessionRoot') { d.fx = null; d.fy = null; }
+              _nodePositions[d.node_id || d.id] = { x: d.x, y: d.y };
+            })
+          )
+          .on('mouseover', hoverNode)
+          .on('mousemove', ev => {
+            const tt = _ensureTooltip();
+            tt.style.left = (ev.pageX + 14) + 'px';
+            tt.style.top  = (ev.pageY - 10) + 'px';
+          })
+          .on('mouseout', blurNode);
+
+        // Node circle
+        grp.append('circle')
+          .attr('r',    d => nodeRadius(d))
+          .attr('fill', d => nodeColor(d))
+          .attr('stroke', d => (d.node_type || d.type) === 'SessionRoot' ? '#58a6ff' : '#21262d')
+          .attr('stroke-width', d => (d.node_type || d.type) === 'SessionRoot' ? 3 : 1.5)
+          .attr('class', d => {
+            const t = d.node_type || d.type;
+            if (t !== 'ConfirmedVulnerability') return '';
+            return (d.severity || '').toLowerCase() === 'critical'
+              ? 'vuln-node-critical' : 'vuln-node';
+          })
+          .attr('filter', d =>
+            (d.node_type || d.type) === 'ConfirmedVulnerability'
+              ? 'url(#glow-vuln)' : null);
+
+        // Node label (below circle)
+        grp.append('text')
+          .attr('text-anchor', 'middle')
+          .attr('dy', d => nodeRadius(d) + 13)
+          .attr('font-size', d => (d.node_type || d.type) === 'SessionRoot' ? 12 : 9)
+          .attr('fill', '#c9d1d9')
+          .attr('pointer-events', 'none')
+          .text(d => {
+            const t   = d.node_type || d.type || '';
+            const lbl = d.label || '';
+            if (t === 'SessionRoot')            return 'TARGET';
+            if (t === 'AttackBranch')           return lbl.toUpperCase().substring(0, 12);
+            if (t === 'ConfirmedVulnerability') return lbl.substring(0, 16);
+            if (t === 'InjectionPoint')         return lbl.replace('Injectable: ', '').substring(0, 14);
+            return lbl.substring(0, 12);
+          });
+
+        return grp;
+      },
+      update => update,
+      exit   => exit.remove()
+    );
+
+  // ── Simulation tick ───────────────────────────────────────────
+  _sim.nodes(nodes).on('tick', () => {
+    const px = (d, axis) => {
+      if (typeof d === 'object' && d !== null) return d[axis] ?? 0;
+      return nodeMap[d]?.[axis] ?? 0;
+    };
+    edgeSel
+      .attr('x1', d => px(d.source, 'x'))
+      .attr('y1', d => px(d.source, 'y'))
+      .attr('x2', d => px(d.target, 'x'))
+      .attr('y2', d => px(d.target, 'y'));
+    nodeSel.attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0})`);
+  });
+
+  _sim.force('link').links(edges);
+  _sim.alpha(0.3).restart();
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────
+
+function renderAttackDAG(dag) {
+  const allNodes    = dag.attack_dag?.nodes || [];
+  const attackNodes = allNodes.filter(n => (n.node_type || n.type) !== 'ThinkingNode');
+  const attackEdges = dag.attack_dag?.edges || [];
+
+  const noMsg = document.getElementById('no-session-msg');
+  if (attackNodes.length === 0) {
+    if (noMsg) noMsg.style.display = 'block';
+    return;
+  }
+  if (noMsg) noMsg.style.display = 'none';
+
+  const container = document.getElementById('attack-canvas');
+  if (!_svg) initGraph(container);
+  renderGraph({ attack_dag: { nodes: attackNodes, edges: attackEdges } });
+}
+
+function renderThinkingFlow(dag) {
+  const tNodes = dag.thinking_dag?.nodes || [];
+  const flow = document.getElementById('thinking-flow');
+  if (!tNodes.length) {
+    flow.innerHTML = '<span style="color:#484f58;font-size:0.78em;padding:6px">No thinking nodes yet.</span>';
+    return;
+  }
+  flow.innerHTML = tNodes.map((n, i) => {
+    const bg = CONF_COLORS(n.confidence || 0);
+    const arrow = i < tNodes.length - 1 ? '<span class="think-arrow">→</span>' : '';
+    const text = (n.thought_text || n.status || 'thinking').substring(0, 35);
+    return `<div class="think-node" style="background:${bg}22;border-color:${bg}44;color:${bg}" title="${(n.thought_text||'').substring(0,200)}">${text}</div>${arrow}`;
+  }).join('');
+  // If visible, re-display as flex
+  if (thinkingVisible) flow.style.display = 'flex';
+}
+
+function renderRightPanel(dag, mcts) {
+  if (currentTab === 'log') renderAgentLog(dag);
+  if (currentTab === 'vulns') renderVulns(dag);
+  if (currentTab === 'mcts') renderMCTS(mcts);
+}
+
+function renderAgentLog(dag) {
+  const logs = dag.reasoning_log || [];
+  const el = document.getElementById('tab-log');
+  if (!logs.length) {
+    el.innerHTML = '<p style="color:#484f58;font-size:0.82em">No reasoning entries.</p>';
+    return;
+  }
+  el.innerHTML = logs.map(r => {
+    let content = {};
+    try { content = JSON.parse(r.content); } catch(e) { content = { text: r.content }; }
+
+    const ti = TYPE_INFO[content.type] || { label: (content.type || 'LOG').toUpperCase(), bg: '#484f58' };
+    const text = (content.rationale || content.finding || content.content || content.reason ||
+                  content.result || content.text || '').substring(0, 280);
+    const prefix = content.attack ? `[${content.attack.toUpperCase()}] ` : '';
+    const confStr = content.confidence !== undefined ? `conf=${parseFloat(content.confidence).toFixed(2)}` : '';
+
+    return `<div class="log-entry">
+      <div class="log-meta">
+        <span class="log-type-badge" style="background:${ti.bg}">${ti.label}</span>
+        <span class="log-step">${(r.step || '').substring(0,30)}</span>
+        <span class="log-time">${(r.created_at || '').substring(11,19)}</span>
+      </div>
+      <div class="log-text">${prefix}${text}</div>
+      ${confStr ? `<div class="log-conf">${confStr}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderVulns(dag) {
+  const findings = dag.findings || [];
+  const el = document.getElementById('tab-vulns');
+  if (!findings.length) {
+    el.innerHTML = '<p style="color:#484f58;font-size:0.82em">No confirmed findings.</p>';
+    return;
+  }
+  const sorted = [...findings].sort((a, b) => {
+    const order = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+    return (order[a.severity?.toLowerCase()] || 5) - (order[b.severity?.toLowerCase()] || 5);
+  });
+  el.innerHTML = sorted.map(f => {
+    const sev = (f.severity || 'info').toLowerCase();
+    return `<div class="vuln-card ${sev}">
+      <div class="vuln-title">
+        <span class="sev-badge sev-${sev}">${f.severity?.toUpperCase()}</span>
+        ${(f.title || 'Unknown').substring(0, 55)}
+      </div>
+      <div class="vuln-meta">
+        ${f.endpoint ? `<code style="color:#58a6ff">${f.endpoint.substring(0,50)}</code><br>` : ''}
+        ${f.cvss ? `CVSS: ${f.cvss}` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMCTS(mcts) {
+  const el = document.getElementById('tab-mcts');
+  const nodes = mcts?.nodes || [];
+  if (!nodes.length) {
+    el.innerHTML = '<p style="color:#484f58;font-size:0.82em">No MCTS data.</p>';
+    return;
+  }
+  const sorted = [...nodes].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+  const rows = sorted.map((n, i) => `
+    <tr class="${i === 0 ? 'top-row' : ''}">
+      <td>${n.attack_type}</td>
+      <td>${(n.prior_probability || 0).toFixed(2)}</td>
+      <td>${(n.posterior_probability || n.posterior || 0).toFixed(2)}</td>
+      <td>${(n.confidence || 0).toFixed(2)}</td>
+      <td>${n.visit_count || 0}</td>
+    </tr>`).join('');
+  el.innerHTML = `<table class="mcts-table">
+    <thead><tr>
+      <th>Attack</th><th>Prior</th><th>Post.</th><th>Conf.</th><th>Visits</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderStats(dag, mcts) {
+  const attackNodes = dag.attack_dag?.nodes || [];
+  const thinkingNodes = dag.thinking_dag?.nodes || [];
+  document.getElementById('stat-nodes').textContent =
+    attackNodes.length + thinkingNodes.length;
+  document.getElementById('stat-branches').textContent =
+    attackNodes.filter(n => n.node_type === 'AttackBranch').length;
+  document.getElementById('stat-vulns').textContent =
+    attackNodes.filter(n => n.node_type === 'ConfirmedVulnerability').length;
+  document.getElementById('stat-facts').textContent =
+    (dag.key_facts || []).length;
+}
+
+function renderChips(dag) {
+  const findings = (dag.findings || []).sort((a, b) => {
+    const o = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+    return (o[a.severity?.toLowerCase()] || 5) - (o[b.severity?.toLowerCase()] || 5);
+  });
+  const cont = document.getElementById('chips-container');
+  if (!findings.length) {
+    cont.innerHTML = '<span style="color:#484f58;font-size:0.8em">None</span>';
+    return;
+  }
+  cont.innerHTML = findings.slice(0, 8).map(f => {
+    const sev = (f.severity || 'info').toLowerCase();
+    return `<span class="vuln-chip sev-${sev}">${(f.title || '').substring(0, 28)}</span>`;
+  }).join('');
+}
+
+// ── Session list ──────────────────────────────────────────────────────────────
+
+async function loadSessions() {
+  try {
+    const r = await fetch(`${GRAPH_URL}/dag/sessions`);
+    const d = await r.json();
+    const sessions = d.sessions || [];
+
+    // Update sidebar list
+    const list = document.getElementById('session-list');
+    if (!sessions.length) {
+      list.innerHTML = '<div style="padding:10px;color:#484f58;font-size:0.8em">No sessions yet.</div>';
+    } else {
+      list.innerHTML = sessions.map(s =>
+        `<div class="session-item ${s.session_id === currentSession ? 'active' : ''}"
+              onclick="selectSession('${s.session_id}')">
+          <div class="sid">${s.session_id}</div>
+          <div class="starget">${(s.target_url || '').replace(/https?:\/\//, '').substring(0, 28)}</div>
+        </div>`
+      ).join('');
+    }
+
+    // Update dropdown
+    const sel = document.getElementById('session-select');
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— select session —</option>';
+    sessions.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.session_id;
+      o.textContent = `${s.session_id}`;
+      if (s.session_id === prev || s.session_id === currentSession) o.selected = true;
+      sel.appendChild(o);
+    });
+
+    // Auto-select first if none selected
+    if (!currentSession && sessions.length > 0) {
+      currentSession = sessions[0].session_id;
+      sel.value = currentSession;
+    }
+  } catch(e) { console.warn('Sessions fetch failed', e); }
+}
+
+function selectSession(sid) {
+  currentSession = sid;
+  document.getElementById('session-select').value = sid;
+  // Update sidebar active state
+  document.querySelectorAll('.session-item').forEach(el => {
+    el.classList.toggle('active', el.querySelector('.sid')?.textContent === sid);
+  });
+  // Show/hide report button
+  const reportBtn = document.getElementById('report-btn');
+  if (reportBtn) reportBtn.style.display = sid ? 'block' : 'none';
+  if (refreshTimer) clearInterval(refreshTimer);
+  clearGraph();   // tear down D3 canvas on session switch
+  if (sid) {
+    refresh();
+    refreshTimer = setInterval(refresh, 8000);
+  }
+}
+
+function openReport() {
+  if (!currentSession) return;
+  window.open(`http://localhost:6081/reports/${currentSession}_report.html`, '_blank');
+}
+
+function manualRefresh() {
+  if (currentSession) refresh();
+}
+
+// ── Main refresh ──────────────────────────────────────────────────────────────
+
+async function refresh() {
+  if (!currentSession) return;
+  try {
+    const [dagR, mctsR] = await Promise.all([
+      fetch(`${GRAPH_URL}/dag/session_data?session_id=${currentSession}`),
+      fetch(`${GRAPH_URL}/dag/mcts_state?session_id=${currentSession}`),
+    ]);
+    const dag = await dagR.json();
+    const mcts = await mctsR.json();
+
+    renderAttackDAG(dag);
+    renderThinkingFlow(dag);
+    renderRightPanel(dag, mcts);
+    renderStats(dag, mcts);
+    renderChips(dag);
+
+    document.getElementById('last-updated').textContent =
+      `⟳ Last: ${new Date().toLocaleTimeString()}`;
+  } catch(e) {
+    console.warn('Refresh failed', e);
+    document.getElementById('last-updated').textContent = '⚠️ Connection error';
+  }
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+
+function switchTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.rp-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('#rp-content > div').forEach(d => d.style.display = 'none');
+  document.getElementById(`tab-${tab}`).style.display = 'block';
+  // Re-render active tab with current data
+  if (currentSession) refresh();
+}
+
+function toggleThinking() {
+  thinkingVisible = !thinkingVisible;
+  const flow = document.getElementById('thinking-flow');
+  const btn = document.getElementById('thinking-toggle');
+  flow.style.display = thinkingVisible ? 'flex' : 'none';
+  btn.textContent = `💭 Thinking DAG  ${thinkingVisible ? '▼' : '▶'}`;
+}
+
+window.addEventListener('resize', () => {
+  if (_svg && _zoom) {
+    const container = document.getElementById('attack-canvas');
+    _svgW = container.offsetWidth  || 800;
+    _svgH = container.offsetHeight || 600;
+    _svg.attr('width', _svgW).attr('height', _svgH);
+  }
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+window.addEventListener('load', async function() {
+  if (typeof d3 === 'undefined') {
+    console.error('D3 CDN failed to load');
+    document.getElementById('no-session-msg').innerHTML =
+      '<h2>⚠️ D3 v7 failed to load</h2><p>Check network connectivity.</p>';
+    return;
+  }
+  await loadSessions();
+  if (currentSession) selectSession(currentSession);
+  setInterval(loadSessions, 30000);
+});
+</script>
+</body>
+</html>

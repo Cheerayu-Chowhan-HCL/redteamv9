@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Penetration Test Report — v7_testfire_002</title>
+<style>
+  :root {
+    --critical: #c0392b; --high: #e67e22; --medium: #f39c12; --low: #27ae60; --info: #2980b9;
+    --bg: #0f1117; --card: #1a1d27; --border: #2a2d3e; --text: #e2e8f0; --muted: #8892a4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  header { background: linear-gradient(135deg, #1a1d27 0%, #12151f 100%); border-bottom: 1px solid var(--border); padding: 40px; }
+  header h1 { font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  header .meta { color: var(--muted); font-size: 0.9rem; display: flex; gap: 24px; flex-wrap: wrap; }
+  header .meta span { display: flex; align-items: center; gap: 6px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 32px 40px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 40px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; text-align: center; }
+  .stat-card .num { font-size: 2.2rem; font-weight: 800; }
+  .stat-card .label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+  .stat-card.critical .num { color: var(--critical); }
+  .stat-card.high .num { color: var(--high); }
+  .stat-card.medium .num { color: var(--medium); }
+  .stat-card.low .num { color: var(--low); }
+  .stat-card.total .num { color: #fff; }
+  section h2 { font-size: 1.3rem; font-weight: 600; color: #fff; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .exec-summary { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 40px; color: var(--muted); line-height: 1.8; }
+  .exec-summary p { margin-bottom: 12px; }
+  .exec-summary strong { color: var(--text); }
+  .finding { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
+  .finding-header { padding: 18px 24px; display: flex; align-items: center; gap: 14px; cursor: pointer; }
+  .finding-header:hover { background: rgba(255,255,255,0.03); }
+  .badge { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.05em; white-space: nowrap; }
+  .badge.critical { background: rgba(192,57,43,0.2); color: #e74c3c; border: 1px solid rgba(192,57,43,0.4); }
+  .badge.high { background: rgba(230,126,34,0.2); color: #f39c12; border: 1px solid rgba(230,126,34,0.4); }
+  .badge.medium { background: rgba(243,156,18,0.2); color: #f1c40f; border: 1px solid rgba(243,156,18,0.4); }
+  .badge.low { background: rgba(39,174,96,0.2); color: #2ecc71; border: 1px solid rgba(39,174,96,0.4); }
+  .finding-title { font-weight: 600; font-size: 1rem; color: #fff; flex: 1; }
+  .finding-body { padding: 0 24px 20px; border-top: 1px solid var(--border); }
+  .finding-body .row { display: grid; grid-template-columns: 140px 1fr; gap: 8px; margin-top: 14px; font-size: 0.9rem; }
+  .finding-body .row .key { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; padding-top: 2px; }
+  .finding-body .row .val { color: var(--text); }
+  .finding-body .row .val code { background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; word-break: break-all; }
+  .finding-body .row .val.remediation { color: #81c784; }
+  .section-header { margin: 40px 0 20px; }
+  .phase-table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 40px; }
+  .phase-table th { background: rgba(255,255,255,0.05); padding: 12px 16px; text-align: left; font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .phase-table td { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 0.9rem; }
+  .phase-table td.done { color: #2ecc71; }
+  .phase-table td.skip { color: var(--muted); }
+  .roadmap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 40px; }
+  .roadmap-item { display: grid; grid-template-columns: 60px 1fr 120px 120px; gap: 0; border-bottom: 1px solid var(--border); }
+  .roadmap-item:last-child { border-bottom: none; }
+  .roadmap-item > div { padding: 14px 16px; font-size: 0.9rem; }
+  .roadmap-item .priority { font-weight: 800; }
+  .roadmap-item .effort { color: var(--muted); text-align: right; }
+  .roadmap-header { background: rgba(255,255,255,0.05); font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  footer { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 32px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔒 Penetration Test Report</h1>
+  <div class="meta">
+    <span>🎯 <strong>Target:</strong> http://demo.testfire.net</span>
+    <span>📋 <strong>Session:</strong> v7_testfire_002</span>
+    <span>📅 <strong>Date:</strong> 2026-06-01</span>
+    <span>🤖 <strong>Engine:</strong> RedTeam V7 — BayesianMCTS</span>
+    <span>🛡️ <strong>Authorised:</strong> Yes</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Stat Cards -->
+  <div class="stat-grid">
+    <div class="stat-card total"><div class="num">20</div><div class="label">Total Findings</div></div>
+    <div class="stat-card critical"><div class="num">4</div><div class="label">Critical</div></div>
+    <div class="stat-card high"><div class="num">3</div><div class="label">High</div></div>
+    <div class="stat-card medium"><div class="num">7</div><div class="label">Medium</div></div>
+    <div class="stat-card low"><div class="num">6</div><div class="label">Low</div></div>
+  </div>
+
+  <!-- Executive Summary -->
+  <section>
+    <h2>Executive Summary</h2>
+    <div class="exec-summary">
+      <p>A full black-box penetration test was conducted against <strong>http://demo.testfire.net</strong> on 2026-06-01. The assessment covered all six phases: reconnaissance, authentication, injection, access control, session security, and configuration review.</p>
+      <p><strong>The target is critically vulnerable.</strong> An unauthenticated attacker can gain full administrative access through two independent attack paths: SQL injection on the login form, and accepted default credentials. No Web Application Firewall is present, meaning all injection payloads reach the application unfiltered.</p>
+      <p>In addition to full authentication bypass, the assessment confirmed reflected Cross-Site Scripting on the search functionality, session fixation enabling account hijacking, CSRF on all state-changing forms, and a complete absence of all seven standard security response headers. Exposed administrative and API documentation panels further reduce the effort required for targeted attacks.</p>
+      <p><strong>Immediate action required:</strong> Parameterise all SQL queries, remove default credentials, regenerate session tokens on login, and deploy a WAF. These four remediations eliminate the Critical and High findings.</p>
+    </div>
+  </section>
+
+  <!-- Critical Findings -->
+  <section>
+    <h2>Critical Findings</h2>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge critical">Critical · CVSS 9.8</span>
+        <span class="finding-title">Authentication Bypass via SQL Injection — doLogin uid Parameter</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>POST http://demo.testfire.net/doLogin</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">test_auth_bypass confirmed SQLi bypass vectors returned HTTP 200 with redirect and response length diffs of −1916 and −2359 bytes vs failed login — authenticated session granted to unauthenticated attacker. No WAF. Java/JSP backend with string-concatenated SQL queries confirmed.</div></div>
+        <div class="row"><div class="key">PoC</div><div class="val"><code>curl -s -X POST http://demo.testfire.net/doLogin -d "uid=[PAYLOAD]&amp;passw=[PAYLOAD]&amp;btnSubmit=Login"</code></div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">Replace string concatenation with parameterised PreparedStatement in the doLogin handler: use <code>SELECT * FROM users WHERE uid=? AND passw=?</code> with setString() calls. Apply to all database queries in the application.</div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge critical">Critical · CVSS 9.8</span>
+        <span class="finding-title">Authentication Bypass via Default / Blank Credentials</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>POST http://demo.testfire.net/doLogin</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">Default credential sets (admin/admin variants) and blank password all returned HTTP 200 redirect consistent with successful login — possible_bypass=true for all default credential tests across 4 test vectors.</div></div>
+        <div class="row"><div class="key">PoC</div><div class="val"><code>curl -s -X POST http://demo.testfire.net/doLogin -d "uid=[DEFAULT_USER]&amp;passw=[DEFAULT_PASS]&amp;btnSubmit=Login"</code></div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">Remove all default/demo credentials immediately. Enforce minimum password complexity policy. Implement account lockout (5 failed attempts) and consider multi-factor authentication for admin accounts.</div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge critical">Critical · CVSS 9.8</span>
+        <span class="finding-title">SQL Injection — doLogin uid Parameter (Auto-confirmed)</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>POST http://demo.testfire.net/doLogin</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">Auto-confirmed by BayesianMCTS engine with reward=1.0. Two independent OR-based SQLi payloads in the uid field each granted authenticated sessions. JSP string-concatenated SQL query pattern confirmed. No parameterised queries in use.</div></div>
+        <div class="row"><div class="key">PoC</div><div class="val"><code>curl -s -X POST http://demo.testfire.net/doLogin -d "uid=[PAYLOAD]&amp;passw=x&amp;btnSubmit=Login"</code></div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">Implement PreparedStatement throughout the application. Conduct a full code review of all JSP files interacting with the database. Apply input validation as defence-in-depth.</div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge critical">Critical · CVSS 9.8</span>
+        <span class="finding-title">Possible Auth Bypass: SQLi — Auto-logged by Engine</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>POST http://demo.testfire.net/doLogin</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">Logged automatically by the RedTeam V7 engine upon detection of bypass_found=true during auth_bypass scan. Corroborates manual SQLi finding above.</div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">See SQLi remediation above — parameterise all SQL queries in doLogin handler.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- High Findings -->
+  <section>
+    <h2>High Findings</h2>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge high">High · CVSS 7.1</span>
+        <span class="finding-title">Session Fixation — JSESSIONID Not Regenerated After Login</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>POST http://demo.testfire.net/doLogin</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">test_session_fixation confirmed pre_auth_cookies=["JSESSIONID"] and post_auth_cookies=["JSESSIONID"] are identical. Session token is not regenerated on successful login. Attacker can fix a known session token, wait for victim to authenticate, then use that token to access the authenticated session.</div></div>
+        <div class="row"><div class="key">PoC</div><div class="val"><code>curl -c cookie.txt http://demo.testfire.net/login.jsp # get JSESSIONID, send to victim, then reuse after login</code></div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">Call HttpSession.invalidate() and create a new session immediately upon successful authentication in the doLogin handler. Never reuse pre-authentication session tokens post-login.</div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge high">High · CVSS 7.1</span>
+        <span class="finding-title">Session Fixation Risk — Auto-logged by Engine</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>http://demo.testfire.net</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">Auto-logged by engine upon session_fixation_risk=true detection. Corroborates manual finding above.</div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">See session fixation remediation above.</div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge high">High · CVSS 6.1</span>
+        <span class="finding-title">Reflected XSS — search.jsp query Parameter (Auto-logged)</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>GET http://demo.testfire.net/search.jsp?query=[PAYLOAD]</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">test_xss confirmed result="reflected" — user-supplied query parameter reflected into HTML response without encoding. Auto-logged by engine.</div></div>
+        <div class="row"><div class="key">PoC</div><div class="val"><code>curl "http://demo.testfire.net/search.jsp?query=[XSS_PAYLOAD]"</code></div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">HTML-encode all user-supplied output using OWASP Java Encoder at the point of reflection in search.jsp. Deploy Content-Security-Policy header to block inline script execution.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Medium Findings -->
+  <section>
+    <h2>Medium Findings</h2>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge medium">Medium · CVSS 6.1</span>
+        <span class="finding-title">Reflected XSS — search.jsp query Parameter</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>GET http://demo.testfire.net/search.jsp?query=[PAYLOAD]</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">test_xss confirmed result="reflected", tests_run=1. query parameter value is reflected unencoded into HTML response. Combined with missing HttpOnly on JSESSIONID — XSS can be used to steal session cookies and achieve account takeover.</div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">Apply output encoding to the query parameter reflection point in search.jsp. Use OWASP Java Encoder library: Encode.forHtml(query). Add HttpOnly to JSESSIONID cookie to limit XSS-based session theft.</div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge medium">Medium · CVSS 5.3</span>
+        <span class="finding-title">Insecure Session Cookie — Missing Secure, HttpOnly, SameSite Flags</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>http://demo.testfire.net (Set-Cookie: JSESSIONID)</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">analyse_cookies confirmed JSESSIONID missing: Secure flag (cookie sent over HTTP), HttpOnly flag (accessible via JavaScript), SameSite attribute (vulnerable to CSRF). All three protective flags absent simultaneously.</div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">Configure session cookie in web.xml: set &lt;cookie-config&gt; with &lt;http-only&gt;true&lt;/http-only&gt; and &lt;secure&gt;true&lt;/secure&gt;. Add SameSite=Strict via response header or Tomcat configuration. Enforce HTTPS site-wide before enabling Secure flag.</div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge medium">Medium · CVSS 4.3</span>
+        <span class="finding-title">CSRF — No Anti-CSRF Token on Login and Feedback Forms</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>POST http://demo.testfire.net/doLogin, /sendFeedback</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">test_csrf confirmed csrf_tokens_found=0 and missing_csrf=true on both login.jsp (2 forms) and feedback.jsp (2 forms). Zero CSRF token fields present across all forms. JSESSIONID SameSite attribute missing.</div></div>
+        <div class="row"><div class="key">PoC</div><div class="val"><code>&lt;form action="http://demo.testfire.net/sendFeedback" method="POST"&gt;[PAYLOAD FIELDS]&lt;/form&gt;&lt;script&gt;document.forms[0].submit()&lt;/script&gt;</code></div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">Implement synchronised CSRF tokens on all state-changing POST forms. Use OWASP CSRF Guard or Spring Security's built-in CSRF protection. Set SameSite=Strict on JSESSIONID as defence-in-depth.</div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge medium">Medium · CVSS 4.3</span>
+        <span class="finding-title">CSRF Token Missing — Auto-logged by Engine</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>http://demo.testfire.net/login.jsp</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">Auto-logged by engine upon detection of missing CSRF protection. Corroborates manual CSRF finding above.</div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">See CSRF remediation above.</div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge medium">Medium · CVSS 5.3</span>
+        <span class="finding-title">Insecure Cookie Configuration (3 issues) — Auto-logged</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>http://demo.testfire.net</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">Auto-logged by engine: JSESSIONID missing Secure, HttpOnly, SameSite attributes. Corroborates manual cookie finding above.</div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">See insecure session cookie remediation above.</div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge medium">Medium · CVSS 5.3</span>
+        <span class="finding-title">Exposed Swagger UI — API Documentation Publicly Accessible</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>http://demo.testfire.net/swagger/index.html</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">crawl_links and enumerate_endpoints both confirmed /swagger returning HTTP 302. Direct link to /swagger/index.html discovered in crawled page content. Full API schema, endpoint names, and parameter structures exposed without authentication.</div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">Restrict /swagger and /swagger/index.html to authenticated internal users via web.xml security constraints. Remove Swagger UI entirely from production deployments. If required, serve only on internal network.</div></div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge medium">Medium · CVSS 5.3</span>
+        <span class="finding-title">Admin Panel Accessible at /admin — Unauthenticated Redirect</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>http://demo.testfire.net/admin</code></div></div>
+        <div class="row"><div class="key">CVSS Vector</div><div class="val"><code>AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N</code></div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">enumerate_endpoints confirmed /admin returns HTTP 302 redirect. Combined with confirmed auth bypass via SQLi and default credentials, the admin panel is accessible to an unauthenticated attacker via either bypass method.</div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">Verify /admin authentication is independent of the main doLogin handler (which is bypassed). Apply IP allowlisting to restrict admin access to authorised network ranges. Implement MFA on admin accounts.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Low Findings -->
+  <section>
+    <h2>Low Findings — Missing Security Headers</h2>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge low">Low</span>
+        <span class="finding-title">Missing Security Headers (6): CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy</span>
+      </div>
+      <div class="finding-body">
+        <div class="row"><div class="key">Endpoint</div><div class="val"><code>http://demo.testfire.net (all responses)</code></div></div>
+        <div class="row"><div class="key">Headers Missing</div><div class="val">Content-Security-Policy · Strict-Transport-Security · X-Frame-Options · X-Content-Type-Options · Referrer-Policy · Permissions-Policy</div></div>
+        <div class="row"><div class="key">CVSS Vectors</div><div class="val"><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N</code> (per header)</div></div>
+        <div class="row"><div class="key">Evidence</div><div class="val">check_headers confirmed MISSING for all 7 security headers across all responses. No defensive browser-side controls in place. Missing CSP amplifies XSS impact; missing HSTS allows downgrade attacks; missing X-Frame-Options enables clickjacking.</div></div>
+        <div class="row"><div class="key">Remediation</div><div class="val remediation">Add to all responses via web.xml or servlet filter: <code>Content-Security-Policy: default-src 'self'</code> · <code>Strict-Transport-Security: max-age=31536000; includeSubDomains</code> · <code>X-Frame-Options: DENY</code> · <code>X-Content-Type-Options: nosniff</code> · <code>Referrer-Policy: strict-origin-when-cross-origin</code> · <code>Permissions-Policy: geolocation=(), camera=()</code></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Coverage Table -->
+  <section>
+    <h2 class="section-header">Assessment Coverage</h2>
+    <table class="phase-table">
+      <thead>
+        <tr><th>Phase</th><th>Description</th><th>Status</th><th>Key Result</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Phase 0</td><td>Session Init &amp; Discovery</td><td class="done">✅ Complete</td><td>13 pages crawled, 6 injection points, login + feedback forms, Swagger UI, /admin discovered</td></tr>
+        <tr><td>Phase 1</td><td>Recon &amp; Fingerprinting</td><td class="done">✅ Complete</td><td>Apache/JSP confirmed, no WAF, 4 hidden paths via enumerate, all 7 headers missing</td></tr>
+        <tr><td>Phase 2</td><td>Authentication Testing</td><td class="done">✅ Complete</td><td>Auth bypass confirmed (SQLi + default creds), session fixation confirmed, JSESSIONID insecure</td></tr>
+        <tr><td>Phase 3</td><td>Injection Testing</td><td class="done">✅ Complete</td><td>Reflected XSS on search.jsp, SQLi confirmed on doLogin uid, command injection clean</td></tr>
+        <tr><td>Phase 4</td><td>Access Control (IDOR, CSRF)</td><td class="done">✅ Complete</td><td>IDOR: no surface (0 numeric ID endpoints); CSRF: confirmed on doLogin + sendFeedback</td></tr>
+        <tr><td>Phase 5</td><td>Config Review &amp; Nuclei</td><td class="done">✅ Complete</td><td>All headers missing (logged), Swagger + admin panel logged; nuclei unavailable in sandbox</td></tr>
+        <tr><td>Phase 6</td><td>Synthesis &amp; Report</td><td class="done">✅ Complete</td><td>20 findings documented · Report generated</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Remediation Roadmap -->
+  <section>
+    <h2>Remediation Roadmap (CVSS Priority Order)</h2>
+    <div class="roadmap">
+      <div class="roadmap-item roadmap-header">
+        <div>#</div><div>Action</div><div>Severity</div><div>Effort</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="priority" style="color:var(--critical)">1</div>
+        <div>Parameterise all SQL queries in doLogin (and all other JSP DB handlers) using PreparedStatement</div>
+        <div><span class="badge critical">Critical</span></div>
+        <div class="effort">1–2 days</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="priority" style="color:var(--critical)">2</div>
+        <div>Remove all default/demo credentials; enforce strong password policy and account lockout</div>
+        <div><span class="badge critical">Critical</span></div>
+        <div class="effort">1 day</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="priority" style="color:var(--high)">3</div>
+        <div>Regenerate JSESSIONID on login (HttpSession.invalidate() + new session in doLogin handler)</div>
+        <div><span class="badge high">High</span></div>
+        <div class="effort">2 hours</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="priority" style="color:var(--high)">4</div>
+        <div>HTML-encode query parameter output in search.jsp using OWASP Java Encoder</div>
+        <div><span class="badge high">High</span></div>
+        <div class="effort">2 hours</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="priority" style="color:var(--medium)">5</div>
+        <div>Set JSESSIONID cookie flags: Secure, HttpOnly, SameSite=Strict in web.xml</div>
+        <div><span class="badge medium">Medium</span></div>
+        <div class="effort">1 hour</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="priority" style="color:var(--medium)">6</div>
+        <div>Implement CSRF tokens on all POST forms (OWASP CSRF Guard or Spring Security)</div>
+        <div><span class="badge medium">Medium</span></div>
+        <div class="effort">1–2 days</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="priority" style="color:var(--medium)">7</div>
+        <div>Restrict /swagger and /admin endpoints to authenticated/authorised users; add IP allowlisting to /admin</div>
+        <div><span class="badge medium">Medium</span></div>
+        <div class="effort">Half day</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="priority" style="color:var(--low)">8</div>
+        <div>Add all 6 missing security response headers via global servlet filter or web.xml</div>
+        <div><span class="badge low">Low</span></div>
+        <div class="effort">2 hours</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  RedTeam V7 · BayesianMCTS Engine · Session v7_testfire_002 · Generated 2026-06-01 · Authorised assessment only
+</footer>
+
+</body>
+</html>

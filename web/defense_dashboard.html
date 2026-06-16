@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RedTeam V9 - SICD Defense Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  min-height: 100%;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+}
+body { overflow: hidden; }
+#topbar {
+  height: 46px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+}
+#title { color: #58a6ff; font-size: 1.05em; font-weight: 700; white-space: nowrap; }
+#session-select, #test-id {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 0.82em;
+}
+#test-id { width: 210px; }
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.tb-btn {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8em;
+}
+.tb-btn:hover { background: #30363d; }
+.tb-btn.inject { background: #9e6a031f; border-color: #d29922; color: #f2cc60; }
+#last-updated { color: #8b949e; font-size: 0.75em; white-space: nowrap; }
+#layout {
+  display: grid;
+  grid-template-columns: 260px 1fr 420px;
+  gap: 0;
+  height: calc(100vh - 46px);
+}
+#left, #main, #right {
+  overflow: hidden;
+  border-color: #30363d;
+}
+#left { border-right: 1px solid #30363d; background: #0d1117; }
+#right { border-left: 1px solid #30363d; background: #0d1117; }
+.panel-header {
+  height: 38px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  color: #8b949e;
+  font-size: 0.78em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.scroll { height: calc(100% - 38px); overflow-y: auto; padding: 12px; }
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid #30363d;
+}
+.metric {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 10px;
+  min-height: 68px;
+}
+.metric .label { color: #8b949e; font-size: 0.74em; text-transform: uppercase; }
+.metric .value { color: #58a6ff; font-size: 1.55em; font-weight: 700; margin-top: 6px; }
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px;
+  height: calc(100% - 93px);
+  overflow: hidden;
+}
+.section {
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #0d1117;
+}
+.section .section-title {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-bottom: 1px solid #30363d;
+  color: #c9d1d9;
+  font-size: 0.82em;
+  font-weight: 700;
+}
+.section .section-body { height: calc(100% - 34px); overflow-y: auto; padding: 10px; }
+.session-item, .intent-item, .incident-item, .audit-item {
+  border-bottom: 1px solid #21262d;
+  padding: 9px 0;
+  font-size: 0.78em;
+}
+.session-item:first-child, .intent-item:first-child, .incident-item:first-child, .audit-item:first-child { padding-top: 0; }
+.session-item button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+.session-item.active { background: #1f6feb14; margin: 0 -8px; padding: 9px 8px; border-left: 3px solid #1f6feb; }
+.sid, .intent-name, .tool-name { color: #58a6ff; font-weight: 700; overflow-wrap: anywhere; }
+.muted { color: #8b949e; }
+.tiny { color: #484f58; font-size: 0.9em; margin-top: 3px; overflow-wrap: anywhere; }
+.badge {
+  display: inline-block;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 0.75em;
+  font-weight: 700;
+  margin-right: 5px;
+}
+.sev-critical, .sev-high { background: #da3633; color: #fff; }
+.sev-medium { background: #9e6a03; color: #fff; }
+.sev-low { background: #1f6feb; color: #fff; }
+.sev-info { background: #238636; color: #fff; }
+.mast { background: #6e40c9; color: #fff; }
+.synthetic { background: #9e6a03; color: #fff; }
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid #21262d;
+  font-size: 0.78em;
+}
+.summary-row span:first-child { overflow-wrap: anywhere; }
+.summary-row span:last-child { color: #58a6ff; font-weight: 700; }
+.empty { color: #484f58; font-size: 0.82em; padding: 4px 0; }
+#status-line { color: #8b949e; font-size: 0.76em; padding: 10px 12px; border-top: 1px solid #30363d; }
+@media (max-width: 1100px) {
+  #layout { grid-template-columns: 220px 1fr; }
+  #right { display: none; }
+  .metrics { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+  .content-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <span id="title">RedTeam V9 - SICD Defense Dashboard</span>
+  <select id="session-select" onchange="selectSession(this.value)">
+    <option value="">select session</option>
+  </select>
+  <input id="test-id" value="sicd_dashboard_probe" autocomplete="off" spellcheck="false" aria-label="Chaos test id">
+  <button class="tb-btn inject" onclick="injectChaos()">Inject Chaos</button>
+  <button class="tb-btn" onclick="refresh()">Refresh</button>
+  <div class="tb-right">
+    <span id="last-updated">Connecting...</span>
+  </div>
+</div>
+
+<div id="layout">
+  <aside id="left">
+    <div class="panel-header">Sessions</div>
+    <div class="scroll" id="session-list"><div class="empty">Loading...</div></div>
+  </aside>
+
+  <main id="main">
+    <div class="metrics">
+      <div class="metric"><div class="label">Active Sessions</div><div class="value" id="m-sessions">0</div></div>
+      <div class="metric"><div class="label">Active Intents</div><div class="value" id="m-intents">0</div></div>
+      <div class="metric"><div class="label">Recent Incidents</div><div class="value" id="m-incidents">0</div></div>
+      <div class="metric"><div class="label">Tool Events</div><div class="value" id="m-audit">0</div></div>
+      <div class="metric"><div class="label">Service</div><div class="value" id="m-status">--</div></div>
+    </div>
+
+    <div class="content-grid">
+      <section class="section">
+        <div class="section-title">Active Intent Contract</div>
+        <div class="section-body" id="intent-contract"><div class="empty">No active intent selected.</div></div>
+      </section>
+      <section class="section">
+        <div class="section-title">Recent MAST Incidents</div>
+        <div class="section-body" id="incidents"><div class="empty">No incidents.</div></div>
+      </section>
+      <section class="section">
+        <div class="section-title">Tool Audit Stream</div>
+        <div class="section-body" id="audit-stream"><div class="empty">No events.</div></div>
+      </section>
+      <section class="section">
+        <div class="section-title">Summary Counts</div>
+        <div class="section-body" id="summary-counts"><div class="empty">No summary data.</div></div>
+      </section>
+    </div>
+    <div id="status-line">Synthetic chaos records are marked test-only and never perform network traffic.</div>
+  </main>
+
+  <aside id="right">
+    <div class="panel-header">All Active Intents</div>
+    <div class="scroll" id="all-intents"><div class="empty">No active intents.</div></div>
+  </aside>
+</div>
+
+<script>
+const GRAPH_URL = "http://localhost:6037";
+let state = null;
+let selectedSession = "";
+let refreshTimer = null;
+
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[ch]));
+}
+
+function severityClass(sev) {
+  const s = String(sev || "info").toLowerCase();
+  return ["critical", "high", "medium", "low", "info"].includes(s) ? `sev-${s}` : "sev-info";
+}
+
+function updateMetrics(data) {
+  const counts = data.summary?.counts || {};
+  document.getElementById("m-sessions").textContent = counts.sessions_active || 0;
+  document.getElementById("m-intents").textContent = counts.active_intents || 0;
+  document.getElementById("m-incidents").textContent = counts.recent_incidents || 0;
+  document.getElementById("m-audit").textContent = counts.recent_tool_events || 0;
+  document.getElementById("m-status").textContent = data.status || "--";
+}
+
+function renderSessions(data) {
+  const sessions = data.active_sessions || [];
+  const list = document.getElementById("session-list");
+  const select = document.getElementById("session-select");
+
+  if (!selectedSession && sessions.length) selectedSession = sessions[0].session_id;
+  select.innerHTML = '<option value="">select session</option>' + sessions.map(s =>
+    `<option value="${esc(s.session_id)}" ${s.session_id === selectedSession ? "selected" : ""}>${esc(s.session_id)}</option>`
+  ).join("");
+
+  if (!sessions.length) {
+    list.innerHTML = '<div class="empty">No active sessions.</div>';
+    return;
+  }
+  list.innerHTML = sessions.map(s => `
+    <div class="session-item ${s.session_id === selectedSession ? "active" : ""}">
+      <button onclick="selectSession('${esc(s.session_id)}')">
+        <div class="sid">${esc(s.session_id)}</div>
+        <div class="tiny">${esc(s.target_url || "")}</div>
+        <div class="tiny">${esc(s.goal || "")}</div>
+      </button>
+    </div>
+  `).join("");
+}
+
+function renderIntentContract(data) {
+  const intents = data.active_declared_intents || [];
+  const selected = intents.find(i => i.session_id === selectedSession);
+  const box = document.getElementById("intent-contract");
+  if (!selected) {
+    box.innerHTML = '<div class="empty">No active declared intent for the selected session.</div>';
+    return;
+  }
+  box.innerHTML = `
+    <div class="intent-item">
+      <div class="intent-name">${esc(selected.intent)}</div>
+      <div class="tiny">phase: ${esc(selected.phase)} | confidence: ${Number(selected.confidence || 0).toFixed(2)}</div>
+      <div class="tiny">scope: ${esc(selected.scope)}</div>
+      <div class="tiny">tools: ${esc((selected.tools_authorised || []).join(", "))}</div>
+      <div class="tiny">rationale: ${esc(selected.rationale || "")}</div>
+    </div>
+  `;
+}
+
+function renderAllIntents(data) {
+  const intents = data.active_declared_intents || [];
+  const box = document.getElementById("all-intents");
+  if (!intents.length) {
+    box.innerHTML = '<div class="empty">No active intents.</div>';
+    return;
+  }
+  box.innerHTML = intents.map(i => `
+    <div class="intent-item">
+      <div class="intent-name">${esc(i.intent)}</div>
+      <div class="tiny">${esc(i.session_id)}</div>
+      <div class="tiny">${esc(i.phase)} | ${Number(i.confidence || 0).toFixed(2)}</div>
+    </div>
+  `).join("");
+}
+
+function renderIncidents(data) {
+  const incidents = (data.recent_mast_incidents || [])
+    .filter(i => !selectedSession || i.session_id === selectedSession);
+  const box = document.getElementById("incidents");
+  if (!incidents.length) {
+    box.innerHTML = '<div class="empty">No incidents for selected session.</div>';
+    return;
+  }
+  box.innerHTML = incidents.map(i => {
+    const synthetic = String(i.parameters_summary || "").includes('"synthetic": true');
+    return `
+      <div class="incident-item">
+        <span class="badge ${severityClass(i.severity)}">${esc(i.severity || "info")}</span>
+        <span class="badge mast">${esc(i.mast_classification || "MAST")}</span>
+        ${synthetic ? '<span class="badge synthetic">synthetic</span>' : ""}
+        <div class="tool-name">${esc(i.tool_name)}</div>
+        <div class="tiny">${esc(i.session_phase || "unknown")} | ${esc(i.planner_intent || "no planner intent")}</div>
+        <div class="tiny">${esc(i.timestamp)}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderAudit(data) {
+  const events = (data.recent_tool_audit_events || [])
+    .filter(e => !selectedSession || e.session_id === selectedSession);
+  const box = document.getElementById("audit-stream");
+  if (!events.length) {
+    box.innerHTML = '<div class="empty">No tool audit events for selected session.</div>';
+    return;
+  }
+  box.innerHTML = events.map(e => `
+    <div class="audit-item">
+      <div class="tool-name">${esc(e.tool_name)}</div>
+      <div class="tiny">${esc(e.session_phase || "no phase")} | ${esc(e.planner_intent || "no intent")}</div>
+      <div class="tiny">${esc(e.result_summary || "")}</div>
+      <div class="tiny">${esc(e.timestamp)}</div>
+    </div>
+  `).join("");
+}
+
+function rows(title, items) {
+  if (!items || !items.length) return "";
+  return `<div class="muted" style="font-size:0.78em;margin:8px 0 4px">${esc(title)}</div>` +
+    items.map(i => `<div class="summary-row"><span>${esc(i.key)}</span><span>${esc(i.count)}</span></div>`).join("");
+}
+
+function renderSummary(data) {
+  const s = data.summary || {};
+  document.getElementById("summary-counts").innerHTML =
+    rows("By Phase", s.by_phase) +
+    rows("By Intent", s.by_intent) +
+    rows("Findings By Severity", s.findings_by_severity) +
+    rows("Incidents By Severity", s.incidents_by_severity) +
+    rows("By MAST Classification", s.by_mast_classification) ||
+    '<div class="empty">No summary data.</div>';
+}
+
+function render(data) {
+  updateMetrics(data);
+  renderSessions(data);
+  renderIntentContract(data);
+  renderAllIntents(data);
+  renderIncidents(data);
+  renderAudit(data);
+  renderSummary(data);
+  document.getElementById("last-updated").textContent = `Last: ${new Date().toLocaleTimeString()}`;
+}
+
+async function refresh() {
+  try {
+    const response = await fetch(`${GRAPH_URL}/intent_status?limit=50`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    state = await response.json();
+    render(state);
+  } catch (err) {
+    console.error("intent_status failed", err);
+    document.getElementById("last-updated").textContent = "Connection error";
+  }
+}
+
+function selectSession(sessionId) {
+  selectedSession = sessionId;
+  if (state) render(state);
+}
+
+async function injectChaos() {
+  const sessionId = selectedSession || document.getElementById("session-select").value || "sicd_dashboard_test";
+  const testId = document.getElementById("test-id").value.trim() || "sicd_dashboard_probe";
+  try {
+    const response = await fetch(`${GRAPH_URL}/inject_chaos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId, test_id: testId })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.detail || data.error || `HTTP ${response.status}`);
+    selectedSession = data.session_id;
+    document.getElementById("status-line").textContent =
+      `Injected synthetic incident ${data.incident_id} for ${data.session_id}. No network traffic performed.`;
+    await refresh();
+  } catch (err) {
+    console.error("inject_chaos failed", err);
+    document.getElementById("status-line").textContent = `Chaos injection failed: ${err.message}`;
+  }
+}
+
+window.addEventListener("load", () => {
+  refresh();
+  refreshTimer = setInterval(refresh, 5000);
+});
+</script>
+</body>
+</html>
