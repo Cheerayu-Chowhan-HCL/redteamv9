@@ -1,0 +1,16 @@
+﻿{
+  "mcpServers": {
+    "redteam-v9": {
+      "command": "cmd",
+      "args": [
+        "/C",
+        "npx",
+        "-y",
+        "mcp-remote",
+        "http://127.0.0.1:6019/mcp",
+        "--header",
+        "Authorization: Bearer MElurldSZinZM37riPSaOgXgJYAxKClgCKg7xK6rfh0x"
+      ]
+    }
+  }
+}
