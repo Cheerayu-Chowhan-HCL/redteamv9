@@ -5,8 +5,9 @@ import numpy as np
 from datetime import datetime
 from core.graph_engine import DB_PATH
 
-AUDIT_LOG = pathlib.Path("C:/users/chirayu/redteamv9/logs/tool_audit.jsonl")
-MODEL_PATH = pathlib.Path("C:/users/chirayu/redteamv9/models/sicd_encoder.pt")
+_PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
+AUDIT_LOG = _PROJECT_ROOT / "logs" / "tool_audit.jsonl"
+MODEL_PATH = _PROJECT_ROOT / "models" / "sicd_encoder.pt"
 MODEL_PATH.parent.mkdir(exist_ok=True)
 
 TOOL_VOCAB = [

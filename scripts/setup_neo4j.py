@@ -1,6 +1,7 @@
 """Apply Neo4j schema indexes and verify connectivity."""
 import sys
-sys.path.insert(0, "C:/users/chirayu/redteamv9")
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from neo4j import GraphDatabase
 
 driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "redteam123"))

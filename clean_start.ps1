@@ -1,7 +1,8 @@
 ﻿# RedTeam V9 — Clean startup script
 param([switch]$SkipNeo4j)
 
-Set-Location "C:\users\chirayu\redteamv9"
+$root = $PSScriptRoot
+Set-Location $root
 $ErrorActionPreference = "Stop"
 
 Write-Host ""
@@ -23,7 +24,7 @@ foreach ($port in @(6019, 6037, 6055, 6081)) {
 Start-Sleep -Seconds 1
 
 # -- Step 1: Bearer token ------------------------------------------------------
-$tokenFile = "C:\Users\chirayu\redteamv9\.tmp\rtv9_bearer.txt"
+$tokenFile = "$root\.tmp\rtv9_bearer.txt"
 if (-not (Test-Path $tokenFile)) {
     $token = [System.Web.HttpUtility]::UrlEncode([System.Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32)))
     # Simpler fallback
@@ -92,7 +93,7 @@ if (-not $SkipNeo4j) {
 }
 
 # -- Step 3: Activate venv -----------------------------------------------------
-$venvPath = "C:\users\chirayu\redteamv9\.venv"
+$venvPath = "$root\.venv"
 if (Test-Path "$venvPath\Scripts\python.exe") {
     $python = "$venvPath\Scripts\python.exe"
     Write-Host "  Using venv python: $python" -ForegroundColor Gray
@@ -105,13 +106,13 @@ if (Test-Path "$venvPath\Scripts\python.exe") {
 }
 
 # -- Ensure logs dir -----------------------------------------------------------
-New-Item -ItemType Directory -Force -Path "C:\users\chirayu\redteamv9\logs" | Out-Null
-New-Item -ItemType Directory -Force -Path "C:\users\chirayu\redteamv9\reports" | Out-Null
-New-Item -ItemType Directory -Force -Path "C:\Users\chirayu\redteamv9\.tmp\rtv9_sandbox" | Out-Null
+New-Item -ItemType Directory -Force -Path "$root\logs" | Out-Null
+New-Item -ItemType Directory -Force -Path "$root\reports" | Out-Null
+New-Item -ItemType Directory -Force -Path "$root\.tmp\rtv9_sandbox" | Out-Null
 
 $pids = @{}
-$graphMemoryLog = "C:\users\chirayu\redteamv9\logs\graph_memory.log"
-$graphMemoryErrLog = "C:\users\chirayu\redteamv9\logs\graph_memory_err.log"
+$graphMemoryLog = "$root\logs\graph_memory.log"
+$graphMemoryErrLog = "$root\logs\graph_memory_err.log"
 
 function Test-GraphMemoryHealth {
     try {
@@ -160,7 +161,7 @@ function Write-GraphMemoryFailure {
 Write-Host "[2/5] Starting Graph Memory Server (:6037)..." -ForegroundColor Yellow
 $p1 = Start-Process -FilePath $python `
     -ArgumentList "servers/graph_memory_server.py" `
-    -WorkingDirectory "C:\users\chirayu\redteamv9" `
+    -WorkingDirectory $root `
     -RedirectStandardOutput $graphMemoryLog `
     -RedirectStandardError $graphMemoryErrLog `
     -PassThru -WindowStyle Hidden
@@ -178,7 +179,7 @@ else {
 Write-Host "[3/5] Starting RAG Knowledge Server (:6055)..." -ForegroundColor Yellow
 $p2 = Start-Process -FilePath $python `
     -ArgumentList "servers/rag_server.py" `
-    -WorkingDirectory "C:\users\chirayu\redteamv9" `
+    -WorkingDirectory $root `
     -RedirectStandardOutput "logs\rag_server.log" `
     -RedirectStandardError "logs\rag_server_err.log" `
     -PassThru -WindowStyle Hidden
@@ -199,7 +200,7 @@ else { Write-Host "  WARNING: RAG Server health check failed (may still be loadi
 Write-Host "[4/5] Starting MCP Server (:6019)..." -ForegroundColor Yellow
 $p3 = Start-Process -FilePath $python `
     -ArgumentList "scripts/start_mcp.py" `
-    -WorkingDirectory "C:\users\chirayu\redteamv9" `
+    -WorkingDirectory $root `
     -RedirectStandardOutput "logs\mcp_server.log" `
     -RedirectStandardError "logs\mcp_server_err.log" `
     -PassThru -WindowStyle Hidden
@@ -230,7 +231,7 @@ if ($allowExternal) {
 
 $p4 = Start-Process -FilePath $python `
     -ArgumentList "-m", "http.server", "6081", "--directory", "web", "--bind", $dagBind `
-    -WorkingDirectory "C:\users\chirayu\redteamv9" `
+    -WorkingDirectory $root `
     -RedirectStandardOutput "logs\dag_ui.log" `
     -RedirectStandardError "logs\dag_ui_err.log" `
     -PassThru -WindowStyle Hidden

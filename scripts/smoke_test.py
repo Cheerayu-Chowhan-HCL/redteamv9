@@ -7,7 +7,9 @@ import sys
 import json
 import os
 import time
-sys.path.insert(0, "C:/users/chirayu/redteamv9")
+from pathlib import Path as _Path
+_ROOT = _Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
 
 PASS = "PASS"
 FAIL = "FAIL"
@@ -150,7 +152,7 @@ def run_smoke_test():
         from datetime import datetime
         from pathlib import Path
 
-        REPORTS_DIR = Path("C:/users/chirayu/redteamv9/reports")
+        REPORTS_DIR = _ROOT / "reports"
         REPORTS_DIR.mkdir(exist_ok=True)
 
         ctx = engine.get_session_context(SESSION_ID)

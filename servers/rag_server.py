@@ -9,7 +9,7 @@ import logging
 import hashlib
 from pathlib import Path
 from typing import List, Optional
-sys.path.insert(0, "C:/users/chirayu/redteamv9")
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent.parent))
 
 from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,8 +22,9 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="RedTeam V9 RAG Knowledge Server", version="9.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-KNOWLEDGE_BASE_PATH = Path("C:/users/chirayu/redteamv9/knowledge-base")
-BEARER_TOKEN_FILE = "C:/Users/chirayu/redteamv9/.tmp/rtv9_bearer.txt"
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+KNOWLEDGE_BASE_PATH = _PROJECT_ROOT / "knowledge-base"
+BEARER_TOKEN_FILE = str(_PROJECT_ROOT / ".tmp" / "rtv9_bearer.txt")
 
 _collection = None
 _chunks: List[dict] = []

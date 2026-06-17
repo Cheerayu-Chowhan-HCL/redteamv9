@@ -1,8 +1,10 @@
 ﻿"""Task 2E — verify Neo4j <-> SQLite are in sync."""
 import sys, json, sqlite3, requests, time
-sys.path.insert(0, "C:/users/chirayu/redteamv9")
+from pathlib import Path as _Path
+_ROOT = _Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
 
-BEARER = open("C:/Users/chirayu/redteamv9/.tmp/rtv9_bearer.txt").read().strip()
+BEARER = (_ROOT / ".tmp" / "rtv9_bearer.txt").read_text().strip()
 HEADERS = {"Authorization": f"Bearer {BEARER}"}
 GRAPH_URL = "http://127.0.0.1:6037"
 TEST_SID = "v6_schema_test"
@@ -51,7 +53,7 @@ print(f"Sessions before cleanup: {[s['session_id'] for s in r2.json().get('sessi
 # Use flush via SQLite directly (flush_dbs.py --session)
 import subprocess
 result = subprocess.run(["python", "flush_dbs.py", "--session", TEST_SID],
-                       capture_output=True, text=True, cwd="C:/users/chirayu/redteamv9")
+                       capture_output=True, text=True, cwd=str(_ROOT))
 print("Flush:", result.stdout.strip(), result.stderr.strip())
 
 # Verify deleted

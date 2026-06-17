@@ -1,5 +1,5 @@
 Write-Host "Watching AEX debug log... (Ctrl+C to stop)" -ForegroundColor Cyan
-$log = "C:\Users\chirayu\redteamv9\logs\aex_debug.jsonl"
+$log = "$PSScriptRoot\..\logs\aex_debug.jsonl"
 if (-not (Test-Path $log)) {
     New-Item -ItemType File -Path $log -Force | Out-Null
     Write-Host "Log file created (empty)" -ForegroundColor Yellow

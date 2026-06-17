@@ -9,7 +9,7 @@ import json
 import sqlite3
 import uuid
 from datetime import datetime
-sys.path.insert(0, "C:/users/chirayu/redteamv9")
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent.parent))
 
 from fastapi import FastAPI, HTTPException, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,7 +32,7 @@ engine = GraphEngine()
 init_transfer_table()
 
 # Bearer token auth (write endpoints only)
-BEARER_TOKEN_FILE = "C:/Users/chirayu/redteamv9/.tmp/rtv9_bearer.txt"
+BEARER_TOKEN_FILE = str(__import__('pathlib').Path(__file__).resolve().parent.parent / ".tmp" / "rtv9_bearer.txt")
 
 def _load_token() -> str:
     try:

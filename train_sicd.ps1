@@ -5,7 +5,7 @@
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File train_sicd.ps1
 
 $ErrorActionPreference = "Stop"
-$root = "C:\Users\chirayu\redteamv9"
+$root = Split-Path -Parent $PSCommandPath
 $python = "python"
 
 Write-Host ""

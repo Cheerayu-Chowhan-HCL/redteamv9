@@ -1,7 +1,8 @@
 ﻿"""Create v6_dag_test session with all node types for DAG visual verification."""
 import sys
 import json
-sys.path.insert(0, "C:/users/chirayu/redteamv9")
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core.graph_engine import GraphEngine
 
 ge = GraphEngine()

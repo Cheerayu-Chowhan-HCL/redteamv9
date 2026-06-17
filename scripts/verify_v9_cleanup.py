@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import sys
 
-ROOT = Path("C:/Users/chirayu/redteamv9")
+ROOT = Path(__file__).resolve().parent.parent
 CHECK_DIRS = ["tools", "scripts", "core", "servers", "web", "cowork", "skills", "aex"]
 CHECK_FILES = ["README.md", "DEMO_START.ps1", "clean_start.ps1", "start_v6.ps1"]
 

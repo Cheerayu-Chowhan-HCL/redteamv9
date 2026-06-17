@@ -10,7 +10,7 @@ from typing import List, Dict
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = Path("C:/users/chirayu/redteamv9/redteamv9.db")
+DB_PATH = Path(__file__).resolve().parent.parent / "redteamv9.db"
 
 
 def _get_conn() -> sqlite3.Connection:

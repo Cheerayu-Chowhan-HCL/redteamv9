@@ -3,8 +3,10 @@ RedTeam V9 — AltoroJ Local Pre-flight Test
 Tests actual pentest workflow against local AltoroJ using real MCP tool calls.
 """
 import sys, os, json, time, subprocess, warnings
+from pathlib import Path
+_ROOT = Path(__file__).resolve().parent.parent
 warnings.filterwarnings("ignore")
-sys.path.insert(0, "C:/users/chirayu/redteamv9")
+sys.path.insert(0, str(_ROOT))
 os.environ["ALLOW_INTERNAL"] = "true"
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
@@ -34,7 +36,7 @@ def step(name, ok, detail=""):
 # Clean up any previous preflight session
 try:
     subprocess.run(["python", "flush_dbs.py", "--session", SID],
-                   capture_output=True, cwd="C:/users/chirayu/redteamv9")
+                   capture_output=True, cwd=str(_ROOT))
 except Exception:
     pass
 
@@ -123,7 +125,7 @@ step("generate_report", ok9, f"path={report_path}  findings={findings_count}")
 # Cleanup
 try:
     subprocess.run(["python", "flush_dbs.py", "--session", SID],
-                   capture_output=True, cwd="C:/users/chirayu/redteamv9")
+                   capture_output=True, cwd=str(_ROOT))
     print("\n  Preflight session flushed.")
 except Exception:
     pass

@@ -3,7 +3,8 @@ Tests for DagSanitiser — verifies payload redaction and clean string passthrou
 Run: python -m pytest tests/test_dag_sanitiser.py -v
 """
 import sys
-sys.path.insert(0, "C:/users/chirayu/redteamv9")
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 from core.dag_sanitiser import DagSanitiser

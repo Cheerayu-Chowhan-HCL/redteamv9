@@ -1,5 +1,5 @@
 import sys, os
-sys.path.insert(0, "C:/Users/chirayu/redteamv9")
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent.parent))
 os.environ.setdefault("ALLOW_INTERNAL", "true")
 os.environ.setdefault("FASTMCP_MASK_ERROR_DETAILS", "false")
 os.environ.setdefault("FASTMCP_STRICT_INPUT_VALIDATION", "false")

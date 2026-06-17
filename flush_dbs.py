@@ -9,7 +9,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
-DB_PATH = Path("C:/users/chirayu/redteamv9/redteamv9.db")
+DB_PATH = Path(__file__).resolve().parent / "redteamv9.db"
 NEO4J_URI = "bolt://localhost:7687"
 NEO4J_AUTH = ("neo4j", "redteam123")
 

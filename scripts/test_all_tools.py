@@ -3,7 +3,8 @@ RedTeam V9 — All 34 Tools Direct Test (Task 5)
 Calls each tool directly via import. No Cowork, no Claude Desktop.
 """
 import sys, json, time, os
-sys.path.insert(0, "C:/users/chirayu/redteamv9")
+from pathlib import Path as _Path
+sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
 # Import all tools
@@ -101,7 +102,7 @@ test("generate_report",         generate_report, SESSION_ID)
 # -- Cleanup -------------------------------------------------------------------
 import subprocess
 subprocess.run(["python", "flush_dbs.py", "--session", SESSION_ID],
-               capture_output=True, cwd="C:/users/chirayu/redteamv9")
+               capture_output=True, cwd=str(_Path(__file__).resolve().parent.parent))
 
 # -- Summary -------------------------------------------------------------------
 print(f"\n{'='*75}")

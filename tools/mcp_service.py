@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-sys.path.insert(0, "C:/users/chirayu/redteamv9")
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent.parent))
 
 import httpx
 import requests
@@ -33,10 +33,11 @@ logger = logging.getLogger(__name__)
 
 # ─── Constants ───────────────────────────────────────────────────────────────
 
-BEARER_TOKEN_FILE = Path("C:/Users/chirayu/redteamv9/.tmp/rtv9_bearer.txt")
-AUDIT_LOG = Path("C:/users/chirayu/redteamv9/logs/tool_audit.jsonl")
-REPORTS_DIR = Path("C:/users/chirayu/redteamv9/reports")
-SANDBOX_DIR = Path("C:/Users/chirayu/redteamv9/.tmp/rtv9_sandbox")
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+BEARER_TOKEN_FILE = _PROJECT_ROOT / ".tmp" / "rtv9_bearer.txt"
+AUDIT_LOG = _PROJECT_ROOT / "logs" / "tool_audit.jsonl"
+REPORTS_DIR = _PROJECT_ROOT / "reports"
+SANDBOX_DIR = _PROJECT_ROOT / ".tmp" / "rtv9_sandbox"
 SQLMAP_PATH = os.environ.get("SQLMAP_PATH", "C:/tools/sqlmap/sqlmap.py")
 import shutil as _shutil
 
@@ -1782,8 +1783,10 @@ def kill_all_scans() -> dict:
 
 
 @mcp.tool()
-def shell_exec(command: str, working_dir: str = "C:/Users/chirayu/redteamv9/.tmp/rtv9_sandbox") -> dict:
+def shell_exec(command: str, working_dir: str = "") -> dict:
     """Controlled shell execution. Certain destructive commands are blocked."""
+    if not working_dir:
+        working_dir = str(SANDBOX_DIR)
     BLOCKED = [
         r"rm\s+-rf", r"format\s+[a-z]:", r"del\s+/f\s+/s",
         r"reg\s+delete", r"net\s+user", r"rd\s+/s\s+/q",
@@ -2240,12 +2243,12 @@ def read_skill(mode: str = "phase_0", phase: int = 0) -> dict:
     phase: phase number 0-6
     Returns full skill file content — agent extracts the relevant phase section.
     """
-    skill_dir = Path("C:/users/chirayu/redteamv9/skills")
+    skill_dir = _PROJECT_ROOT / "skills"
     # Primary: webapp_pt_skill.md (the main methodology document)
     skill_path = skill_dir / "webapp_pt_skill.md"
     if not skill_path.exists():
         # Fallback: COWORK_SPACE_CONTEXT.md contains full methodology
-        skill_path = Path("C:/users/chirayu/redteamv9/cowork/COWORK_SPACE_CONTEXT.md")
+        skill_path = _PROJECT_ROOT / "cowork" / "COWORK_SPACE_CONTEXT.md"
     if not skill_path.exists():
         return _err(f"Skill file not found. Expected: {skill_dir}/webapp_pt_skill.md")
     try:

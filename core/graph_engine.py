@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = Path("C:/users/chirayu/redteamv9/redteamv9.db")
+DB_PATH = Path(__file__).resolve().parent.parent / "redteamv9.db"
 
 NEO4J_URI = "bolt://localhost:7687"
 NEO4J_USER = "neo4j"
@@ -660,8 +660,10 @@ class GraphEngine:
         """Get SICD divergence score for a session.
         Uses trained model if available, heuristic fallback otherwise.
         """
-        import sys
-        sys.path.insert(0, "C:/users/chirayu/redteamv9")
+        import sys as _sys
+        _project_root = str(Path(__file__).resolve().parent.parent)
+        if _project_root not in _sys.path:
+            _sys.path.insert(0, _project_root)
         try:
             from core.sicd_encoder import (compute_divergence_score,
                                            load_corpus)

@@ -13,7 +13,7 @@ from datetime import datetime
 
 from core.graph_engine import DB_PATH
 
-CARDS_DIR = pathlib.Path("C:/users/chirayu/redteamv9/agent_cards")
+CARDS_DIR = pathlib.Path(__file__).resolve().parent.parent / "agent_cards"
 CARDS_DIR.mkdir(exist_ok=True)
 
 SIGNING_KEY = b"redteam_v9_opena2a_signing_key_2026"

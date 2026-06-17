@@ -3,13 +3,15 @@ RedTeam V9 — Full End-to-End Integration Test (Task 4)
 Tests live services with real calls. Not mocked.
 """
 import sys, json, sqlite3, requests, time, os, subprocess
-sys.path.insert(0, "C:/users/chirayu/redteamv9")
+from pathlib import Path
+_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
 
-BEARER = open("C:/Users/chirayu/redteamv9/.tmp/rtv9_bearer.txt").read().strip()
+BEARER = (_ROOT / ".tmp" / "rtv9_bearer.txt").read_text().strip()
 HEADERS = {"Authorization": f"Bearer {BEARER}", "Content-Type": "application/json"}
 GRAPH_URL = "http://127.0.0.1:6037"
 SESSION_ID = "v9_integration_test"
-DB_PATH = "C:/users/chirayu/redteamv9/redteamv9.db"
+DB_PATH = str(_ROOT / "redteamv9.db")
 
 results = []
 
@@ -46,7 +48,7 @@ def neo4j_query(cypher, params=None):
 # Clean up any previous test session
 try:
     subprocess.run(["python", "flush_dbs.py", "--session", SESSION_ID],
-                   capture_output=True, cwd="C:/users/chirayu/redteamv9")
+                   capture_output=True, cwd=str(_ROOT))
 except Exception:
     pass
 
@@ -183,7 +185,7 @@ step(8, "DAG session_data: both AttackDAG and ThinkingDAG nodes present",
 # -- Step 9: Cleanup via flush_dbs --------------------------------------------
 print("\nBlock E: Cleanup & Transfer Learning")
 flush = subprocess.run(["python", "flush_dbs.py", "--session", SESSION_ID],
-                       capture_output=True, text=True, cwd="C:/users/chirayu/redteamv9")
+                       capture_output=True, text=True, cwd=str(_ROOT))
 time.sleep(0.3)
 
 gone_sqlite = get_sqlite("SELECT count(*) FROM sessions WHERE session_id=?", (SESSION_ID,))[0] == 0
