@@ -38,8 +38,31 @@ BEARER_TOKEN_FILE = _PROJECT_ROOT / ".tmp" / "rtv9_bearer.txt"
 AUDIT_LOG = _PROJECT_ROOT / "logs" / "tool_audit.jsonl"
 REPORTS_DIR = _PROJECT_ROOT / "reports"
 SANDBOX_DIR = _PROJECT_ROOT / ".tmp" / "rtv9_sandbox"
-SQLMAP_PATH = os.environ.get("SQLMAP_PATH", "C:/tools/sqlmap/sqlmap.py")
 import shutil as _shutil
+
+def _find_sqlmap() -> list:
+    """Find sqlmap executable — returns command prefix list."""
+    env_path = os.environ.get("SQLMAP_PATH", "")
+    if env_path and Path(env_path).exists():
+        if env_path.endswith(".py"):
+            return ["python", env_path]
+        return [env_path]
+    # pip-installed sqlmap.exe on PATH
+    which = _shutil.which("sqlmap") or _shutil.which("sqlmap.exe")
+    if which:
+        return [which]
+    # Common locations (next to current python, fixed dirs)
+    for candidate in [
+        Path(sys.executable).parent / "sqlmap.exe",
+        Path(sys.executable).parent / "sqlmap",
+        Path("C:/tools/sqlmap/sqlmap.py"),
+        Path("C:/tools/sqlmap/sqlmap.exe"),
+    ]:
+        if candidate.exists():
+            if str(candidate).endswith(".py"):
+                return ["python", str(candidate)]
+            return [str(candidate)]
+    return []
 
 def _find_nuclei() -> str | None:
     env_path = os.environ.get("NUCLEI_PATH", "")
@@ -59,6 +82,9 @@ def _find_nuclei() -> str | None:
 
 NUCLEI_PATH = _find_nuclei()
 GRAPH_MEMORY_URL = "http://127.0.0.1:6037"
+
+from core.graph_engine import DB_PATH as _DB_PATH_FOR_SCOPE
+DB_PATH_STR = str(_DB_PATH_FOR_SCOPE)
 RAG_URL = "http://127.0.0.1:6055"
 
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -200,22 +226,47 @@ def _audit_log(session_id: str, tool_name: str, params_summary: dict, result_sum
                         response_taken="log",
                         severity="medium"
                     )
-                # Check scope — url/target param must match session scope
-                url_param = params_summary.get("url") or params_summary.get("target_url") or ""
-                if url_param and scope and scope not in url_param and url_param not in scope:
-                    if not url_param.startswith("http://127") and not url_param.startswith("http://localhost"):
-                        engine.log_intent_event(
-                            session_id=session_id,
-                            tool_name=tool_name,
-                            session_phase=active_intent.get("phase"),
-                            agent_type="executor",
-                            parameters_summary=json.dumps(params_summary)[:200],
-                            planner_intent=active_intent.get("intent"),
-                            declared_intent_id=active_intent.get("id"),
-                            mast_classification="SCOPE_VIOLATION",
-                            response_taken="log",
-                            severity="high"
+                # Check scope — compare domains, not session_id string
+                url_param = (params_summary.get("url") or
+                             params_summary.get("target_url") or
+                             params_summary.get("target") or "")
+                if url_param and scope:
+                    try:
+                        from urllib.parse import urlparse as _urlparse
+                        import sqlite3 as _sq3
+                        # Look up the session's registered target_url
+                        target_url = ""
+                        with _sq3.connect(DB_PATH_STR) as _sc:
+                            _row = _sc.execute(
+                                "SELECT target_url FROM sessions WHERE session_id=?",
+                                (session_id,)
+                            ).fetchone()
+                            target_url = _row[0] if _row else ""
+                        session_domain = _urlparse(target_url).netloc if target_url else ""
+                        url_domain = _urlparse(url_param).netloc if url_param else ""
+                        is_localhost = (
+                            url_param.startswith("http://127") or
+                            url_param.startswith("http://localhost") or
+                            url_param.startswith("http://10.") or
+                            url_param.startswith("http://192.168.")
                         )
+                        if (url_domain and session_domain and
+                                url_domain != session_domain and
+                                not is_localhost):
+                            engine.log_intent_event(
+                                session_id=session_id,
+                                tool_name=tool_name,
+                                session_phase=active_intent.get("phase"),
+                                agent_type="executor",
+                                parameters_summary=json.dumps(params_summary)[:200],
+                                planner_intent=active_intent.get("intent"),
+                                declared_intent_id=active_intent.get("id"),
+                                mast_classification="SCOPE_VIOLATION",
+                                response_taken="log",
+                                severity="high"
+                            )
+                    except Exception as _scope_err:
+                        logger.debug(f"scope check error: {_scope_err}")
         except Exception as _ice:
             logger.debug(f"IntentCorrelationMiddleware error: {_ice}")
     # ── end IntentCorrelationMiddleware ─────────────────────────────────────
@@ -1088,17 +1139,20 @@ def test_sqli(url: str, parameter: str, method: str = "GET",
     if not _check_rate_limit(session_id):
         return _err("Rate limit exceeded.")
 
+    sqlmap_cmd = _find_sqlmap()
+    if not sqlmap_cmd:
+        return _err("sqlmap not found. Install with: pip install sqlmap")
+
     job_id = f"sqli_{uuid.uuid4().hex[:8]}"
-    cmd = [
-        "python", SQLMAP_PATH,
+    cmd = sqlmap_cmd + [
         "-u", url,
         "-p", parameter,
         "--batch", "--random-agent",
         "--output-dir", str(SANDBOX_DIR / job_id),
-        "--forms" if not data or data == "{}" else "--data", data if data != "{}" else "",
-        "--level=2", "--risk=1",
     ]
-    cmd = [c for c in cmd if c]
+    if data and data != "{}":
+        cmd += ["--data", data]
+    cmd += ["--level=2", "--risk=1"]
 
     # Route external targets through local mitmproxy (port 8888).
     # localhost/127.x targets (e.g. AltoroJ on :8080) bypass the proxy.
@@ -1119,8 +1173,6 @@ def test_sqli(url: str, parameter: str, method: str = "GET",
                    f"Started job {job_id} pid={proc.pid}")
         _update_scan_job_status(job_id, "running")
         return _ok({"job_id": job_id, "pid": proc.pid, "status": "running"})
-    except FileNotFoundError:
-        return _err(f"sqlmap not found at {SQLMAP_PATH}. Set SQLMAP_PATH env var.")
     except Exception as e:
         return _err(str(e))
 
@@ -1143,6 +1195,29 @@ def check_sqli_status(job_id: str) -> dict:
     else:
         # Server restarted — read from SQLite
         status = _get_scan_job_status(job_id)
+
+    # Write result summary back to scan_jobs when scan finishes
+    if status in ("complete", "error"):
+        try:
+            out_dir = SANDBOX_DIR / job_id
+            findings = []
+            if out_dir.exists():
+                for log_file in out_dir.rglob("*.log"):
+                    text = log_file.read_text(errors="ignore")
+                    if "injectable" in text.lower() or "injection" in text.lower():
+                        findings.append({"type": "SQL Injection", "file": log_file.name,
+                                         "confirmed": "injectable" in text.lower()})
+            import sqlite3 as _sq3
+            from core.graph_engine import DB_PATH as _DB_PATH
+            with _sq3.connect(_DB_PATH) as _rc:
+                _rc.execute(
+                    "UPDATE scan_jobs SET result=? WHERE job_id=?",
+                    (json.dumps({"status": status, "findings": findings})[:2000], job_id)
+                )
+                _rc.commit()
+        except Exception as _rwe:
+            logger.debug(f"sqli result write-back failed: {_rwe}")
+
     _audit_log("", "check_sqli_status", {"job_id": job_id}, f"status={status}")
     return _ok({"job_id": job_id, "status": status})
 
@@ -1753,13 +1828,35 @@ def check_nuclei_status(job_id: str) -> dict:
         status = _get_scan_job_status(job_id)
 
     finding_count = 0
+    findings_list = []
     out_file = SANDBOX_DIR / f"{job_id}_output.json"
     if out_file.exists():
         try:
             lines = out_file.read_text().strip().split("\n")
-            finding_count = len([l for l in lines if l.strip()])
+            for line in lines:
+                if not line.strip():
+                    continue
+                finding_count += 1
+                try:
+                    findings_list.append(json.loads(line))
+                except Exception:
+                    findings_list.append({"raw": line[:200]})
         except Exception:
             pass
+
+    # Write results back to scan_jobs when scan is done
+    if status in ("complete", "error") and findings_list:
+        try:
+            import sqlite3 as _sq3
+            from core.graph_engine import DB_PATH as _DB_PATH
+            with _sq3.connect(_DB_PATH) as _rc:
+                _rc.execute(
+                    "UPDATE scan_jobs SET result=? WHERE job_id=?",
+                    (json.dumps(findings_list)[:2000], job_id)
+                )
+                _rc.commit()
+        except Exception as _rwe:
+            logger.debug(f"nuclei result write-back failed: {_rwe}")
 
     _audit_log("", "check_nuclei_status", {"job_id": job_id}, f"status={status}")
     return _ok({"job_id": job_id, "status": status, "finding_count": finding_count})
