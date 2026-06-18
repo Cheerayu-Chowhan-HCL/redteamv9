@@ -10,8 +10,11 @@ import sqlite3
 import uuid
 from datetime import datetime
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent.parent))
+import pathlib as _pathlib
+_PROJECT_ROOT = _pathlib.Path(__file__).resolve().parent.parent
 
 from fastapi import FastAPI, HTTPException, Header, Depends, Request
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Any
@@ -282,6 +285,24 @@ def intent_status(limit: int = 25):
         }
     except Exception as e:
         raise HTTPException(500, str(e))
+
+@app.get("/report/{session_id}")
+def get_report(session_id: str):
+    """Download the HTML report for a session."""
+    from fastapi.responses import JSONResponse
+    reports_dir = _PROJECT_ROOT / "reports"
+    report_file = reports_dir / f"{session_id}_report.html"
+    if report_file.exists():
+        return FileResponse(
+            path=str(report_file),
+            filename=f"{session_id}_report.html",
+            media_type="text/html"
+        )
+    return JSONResponse(
+        {"error": f"Report not found for {session_id}", "looked_in": str(report_file)},
+        status_code=404
+    )
+
 
 @app.post("/inject_chaos", dependencies=[Depends(require_auth)])
 def inject_chaos(body: ChaosInject, request: Request):

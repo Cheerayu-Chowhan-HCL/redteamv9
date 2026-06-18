@@ -833,7 +833,7 @@ function selectSession(sid) {
 
 function openReport() {
   if (!currentSession) return;
-  window.open(`http://localhost:6081/reports/${currentSession}_report.html`, '_blank');
+  window.open(`http://localhost:6037/report/${currentSession}`, '_blank');
 }
 
 function manualRefresh() {

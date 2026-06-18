@@ -286,9 +286,12 @@ Write-Host ""
 Write-Host "  AEX connector: http://localhost:6019/mcp (StreamableHTTP, no auth)" -ForegroundColor Cyan
 Write-Host ""
 
-# Step 17 - Open DAG UI in browser
-Write-Host "[17] Opening DAG UI..." -ForegroundColor Yellow
+# Step 17 - Open DAG UI and Defense Dashboard in browser
+Write-Host "[17] Opening DAG UI and Defense Dashboard..." -ForegroundColor Yellow
 Start-Process "http://localhost:6081/dag_ui.html"
+Start-Sleep -Seconds 1
+Start-Process "http://localhost:6081/defense_dashboard.html"
+Write-Host "  Defense dashboard: http://localhost:6081/defense_dashboard.html" -ForegroundColor Cyan
 
 Write-Host ""
 Write-Host "  Done. Demo ready." -ForegroundColor Cyan

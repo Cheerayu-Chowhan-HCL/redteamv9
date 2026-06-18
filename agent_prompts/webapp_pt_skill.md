@@ -140,7 +140,16 @@ add_finding(session_id,
 **Goal:** Test all input fields for injection vulnerabilities.
 
 1. `set_branch(session_id, "sqli", "Input validation — injection testing")`
-2. `retrieve_knowledge("[technology] SQL injection bypass techniques", top_k=5)` — load from RAG
+2. MANDATORY — call BEFORE any test_sqli or test_xss call:
+   `retrieve_knowledge("[server_from_fingerprint] SQL injection bypass techniques", top_k=5)`
+   `retrieve_knowledge("[server_from_fingerprint] XSS bypass techniques", top_k=3)`
+   `retrieve_knowledge("[server_from_fingerprint] WAF bypass payloads", top_k=3)`
+   Replace [server_from_fingerprint] with actual detected server e.g.
+   "Apache PHP MySQL", "Tomcat Java", "IIS ASP.NET", "nginx Node.js"
+   This loads known-working bypass payloads from the RAG knowledge base.
+   Skipping this step means using only generic payloads — significantly
+   lower success rate against hardened or WAF-protected targets.
+   The RAG corpus contains PayloadsAllTheThings and known CVE PoCs.
 3. For each injection point in your inventory:
    a. `test_sqli(url, parameter, method, data, cookies, session_id)` -> returns job_id
    b. While SQLi scan is running, immediately run in parallel:

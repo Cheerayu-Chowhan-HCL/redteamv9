@@ -143,6 +143,7 @@ class GraphEngine:
                     evidence TEXT,
                     cvss TEXT,
                     remediation TEXT,
+                    poc_command TEXT DEFAULT '',
                     created_at TEXT DEFAULT (datetime('now'))
                 );
                 CREATE TABLE IF NOT EXISTS scan_jobs (
@@ -379,7 +380,7 @@ class GraphEngine:
 
     def add_finding(self, session_id: str, title: str, severity: str, endpoint: str,
                     evidence: str, cvss: str, remediation: str,
-                    branch_id: Optional[str] = None) -> str:
+                    branch_id: Optional[str] = None, poc_command: str = "") -> str:
         # branch_id: explicit branch for parallel-agent attribution.
         # When provided, findings are attributed to this specific branch instead of
         # _current_branch, eliminating race conditions in parallel subtask execution.
@@ -414,9 +415,9 @@ class GraphEngine:
         with _get_conn() as conn:
             conn.execute(
                 """INSERT INTO findings
-                   (finding_id, session_id, title, severity, endpoint, evidence, cvss, remediation)
-                   VALUES (?,?,?,?,?,?,?,?)""",
-                (finding_id, session_id, title, severity, endpoint, evidence, cvss, remediation)
+                   (finding_id, session_id, title, severity, endpoint, evidence, cvss, remediation, poc_command)
+                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                (finding_id, session_id, title, severity, endpoint, evidence, cvss, remediation, poc_command)
             )
             conn.commit()
         self.add_node(session_id, "ConfirmedVulnerability", title,
