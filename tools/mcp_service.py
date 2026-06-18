@@ -1806,12 +1806,33 @@ def run_nuclei_scan(target_url: str, templates: str = "misconfigurations",
     job_id = f"nuclei_{uuid.uuid4().hex[:8]}"
     out_file = str(SANDBOX_DIR / f"{job_id}_output.json")
 
-    template_list = [t.strip() for t in templates.split(",")]
-    template_args = []
-    for t in template_list:
-        template_args += ["-t", t]
+    # Map caller-friendly names → nuclei tag names (not directory paths).
+    # nuclei v3.x uses -tags, not -t <dirname>; missing paths cause silent
+    # internet blocking. -duc prevents update-check blocking on every run.
+    TAG_MAP = {
+        "misconfigurations": "misconfig",
+        "cves":              "cve",
+        "exposed-panels":    "exposure",
+        "technologies":      "tech",
+        "default":           "misconfig,cve,exposure,tech",
+    }
+    raw_templates = templates or "misconfigurations,cves,exposed-panels,technologies"
+    tag_list = []
+    for t in raw_templates.split(","):
+        t = t.strip()
+        tag_list.append(TAG_MAP.get(t, t))
+    tags_arg = ",".join(tag_list)
 
-    cmd = [NUCLEI_PATH, "-u", target_url, "-o", out_file, "-json"] + template_args + ["-silent"]
+    cmd = [
+        NUCLEI_PATH,
+        "-u", target_url,
+        "-tags", tags_arg,
+        "-duc",          # disable update check — prevents internet blocking
+        "-silent",
+        "-j",            # JSON lines output
+        "-timeout", "10",
+        "-o", out_file,
+    ]
 
     # Route external targets through local mitmproxy (port 8888).
     # localhost/127.x targets (e.g. AltoroJ on :8080) bypass the proxy.
