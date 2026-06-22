@@ -120,14 +120,14 @@ def run_engagement(target_url, session_id, goal="Full black-box web application 
     search_url = target_url.rstrip("/") + "/search"
     sqli_job = tool("test_sqli", {"url": search_url, "parameter": "query",
         "method": "GET", "data": "", "cookies": {}, "session_id": session_id})
-    job_id = (sqli_job.get("data") or sqli_job).get("job_id","")
+    job_id = (sqli_job.get("result") or sqli_job.get("data") or sqli_job).get("job_id","")
     tool("test_xss", {"url": search_url, "parameter": "query",
         "method": "GET", "data": "", "cookies": {}, "session_id": session_id})
     if job_id:
         for _ in range(6):
             time.sleep(10)
             status = tool("check_sqli_status", {"job_id": job_id})
-            s = (status.get("data") or status).get("status","")
+            s = (status.get("result") or status.get("data") or status).get("status","")
             print(f"    sqli status: {s}")
             if s in ("complete","error"):
                 break
@@ -158,12 +158,12 @@ def run_engagement(target_url, session_id, goal="Full black-box web application 
     nuclei_job = tool("run_nuclei_scan", {"target_url": target_url,
         "templates": "misconfigurations,cves,exposed-panels,technologies",
         "session_id": session_id})
-    nid = (nuclei_job.get("data") or nuclei_job).get("job_id","")
+    nid = (nuclei_job.get("result") or nuclei_job.get("data") or nuclei_job).get("job_id","")
     if nid:
         for _ in range(8):
             time.sleep(10)
             nstatus = tool("check_nuclei_status", {"job_id": nid})
-            ns = (nstatus.get("data") or nstatus).get("status","")
+            ns = (nstatus.get("result") or nstatus.get("data") or nstatus).get("status","")
             print(f"    nuclei status: {ns}")
             if ns in ("complete","error"):
                 break
