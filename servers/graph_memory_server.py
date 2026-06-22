@@ -304,6 +304,30 @@ def get_report(session_id: str):
     )
 
 
+@app.get("/findings/{session_id}")
+async def get_findings(session_id: str):
+    import sqlite3
+    from core.graph_engine import DB_PATH
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        rows = conn.execute(
+            """SELECT title, severity, endpoint, cvss,
+                      evidence, remediation, attack_type
+               FROM findings WHERE session_id=?
+               ORDER BY rowid""",
+            (session_id,)
+        ).fetchall()
+        conn.close()
+        return {"findings": [
+            {"title": r[0], "severity": r[1], "endpoint": r[2],
+             "cvss": r[3], "evidence": r[4][:100] if r[4] else "",
+             "attack_type": r[6]}
+            for r in rows
+        ]}
+    except Exception as e:
+        return {"findings": [], "error": str(e)}
+
+
 @app.post("/inject_chaos", dependencies=[Depends(require_auth)])
 def inject_chaos(body: ChaosInject, request: Request):
     """Local-only synthetic SICD anomaly injection for dashboard validation."""

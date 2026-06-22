@@ -304,6 +304,7 @@ const TYPE_INFO = {
   decision:    { label: 'DECIDED',    bg: '#9e6a03' },
   failure:     { label: 'FAILED',     bg: '#da3633' },
   insight:     { label: 'INSIGHT',    bg: '#238636' },
+  finding:     { label: 'FINDING',    bg: '#8b1a1a' },
 };
 
 // ── Custom tooltip (replaces vis.js built-in title rendering) ─────────────────
@@ -665,12 +666,53 @@ function renderRightPanel(dag, mcts) {
 
 function renderAgentLog(dag) {
   const logs = dag.reasoning_log || [];
+  const dbFindings = dag._db_findings || [];
   const el = document.getElementById('tab-log');
-  if (!logs.length) {
+
+  // Build finding pseudo-entries and interleave by index position
+  const findingEntries = dbFindings.map((f, i) => ({
+    _isFinding: true,
+    _idx: i,
+    title: f.title || 'Untitled finding',
+    severity: f.severity || 'medium',
+    endpoint: f.endpoint || '',
+    cvss: f.cvss || '',
+    attack_type: f.attack_type || '',
+  }));
+
+  // Insert finding entries after every ~(logs.length/findingEntries.length) log entries
+  const combined = [...logs];
+  if (findingEntries.length && logs.length) {
+    const step = Math.max(1, Math.floor(logs.length / (findingEntries.length + 1)));
+    findingEntries.forEach((fe, i) => {
+      combined.splice(Math.min((i + 1) * step + i, combined.length), 0, fe);
+    });
+  } else {
+    combined.push(...findingEntries);
+  }
+
+  if (!combined.length) {
     el.innerHTML = '<p style="color:#484f58;font-size:0.82em">No reasoning entries.</p>';
     return;
   }
-  el.innerHTML = logs.map(r => {
+
+  el.innerHTML = combined.map(r => {
+    // ── FINDING entry ────────────────────────────────────────────
+    if (r._isFinding) {
+      const sev = (r.severity || 'medium').toLowerCase();
+      const sevColor = SEV_COLORS[sev] || '#8b949e';
+      const ti = TYPE_INFO.finding;
+      return `<div class="log-entry" style="border-left:2px solid ${sevColor};padding-left:6px">
+        <div class="log-meta">
+          <span class="log-type-badge" style="background:${ti.bg}">${ti.label}</span>
+          <span class="log-step" style="color:${sevColor}">${sev.toUpperCase()}</span>
+          ${r.attack_type ? `<span style="color:#484f58;font-size:0.82em">${r.attack_type}</span>` : ''}
+        </div>
+        <div class="log-text" style="font-weight:500">${r.title.substring(0, 80)}</div>
+        ${r.endpoint ? `<div style="color:#58a6ff;font-size:0.82em;font-family:monospace;margin-top:2px">${r.endpoint.substring(0,60)}</div>` : ''}
+        ${r.cvss ? `<div style="color:#6e40c9;font-size:0.82em;margin-top:1px">CVSS: ${r.cvss}</div>` : ''}
+      </div>`;
+    }
     let content = {};
     try { content = JSON.parse(r.content); } catch(e) { content = { text: r.content }; }
 
@@ -680,6 +722,18 @@ function renderAgentLog(dag) {
     const prefix = content.attack ? `[${content.attack.toUpperCase()}] ` : '';
     const confStr = content.confidence !== undefined ? `conf=${parseFloat(content.confidence).toFixed(2)}` : '';
 
+    let subtitle = '';
+    if (content.type === 'observation') {
+      try {
+        const parsed = typeof content === 'object' ? content : JSON.parse(r.content || '{}');
+        if (parsed.found) {
+          subtitle = typeof parsed.found === 'object'
+            ? JSON.stringify(parsed.found).slice(0, 120)
+            : String(parsed.found).slice(0, 120);
+        }
+      } catch(e) {}
+    }
+
     return `<div class="log-entry">
       <div class="log-meta">
         <span class="log-type-badge" style="background:${ti.bg}">${ti.label}</span>
@@ -687,6 +741,7 @@ function renderAgentLog(dag) {
         <span class="log-time">${(r.created_at || '').substring(11,19)}</span>
       </div>
       <div class="log-text">${prefix}${text}</div>
+      ${subtitle ? `<div style="color:#6e7681;font-size:0.85em;margin-top:2px;font-family:monospace">${subtitle}</div>` : ''}
       ${confStr ? `<div class="log-conf">${confStr}</div>` : ''}
     </div>`;
   }).join('');
@@ -845,12 +900,15 @@ function manualRefresh() {
 async function refresh() {
   if (!currentSession) return;
   try {
-    const [dagR, mctsR] = await Promise.all([
+    const [dagR, mctsR, findingsR] = await Promise.all([
       fetch(`${GRAPH_URL}/dag/session_data?session_id=${currentSession}`),
       fetch(`${GRAPH_URL}/dag/mcts_state?session_id=${currentSession}`),
+      fetch(`${GRAPH_URL}/findings/${currentSession}`),
     ]);
     const dag = await dagR.json();
     const mcts = await mctsR.json();
+    const findingsData = await findingsR.json();
+    dag._db_findings = findingsData.findings || [];
 
     renderAttackDAG(dag);
     renderThinkingFlow(dag);
