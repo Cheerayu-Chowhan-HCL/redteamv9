@@ -471,10 +471,10 @@ function initGraph(container) {
     d3.zoomIdentity.translate(_svgW / 2, _svgH / 2).scale(0.75));
 
   _sim = d3.forceSimulation()
-    .force('link',    d3.forceLink().id(d => d.node_id || d.id).distance(140).strength(0.6))
-    .force('charge',  d3.forceManyBody().strength(-600))
+    .force('link',    d3.forceLink().id(d => d.node_id || d.id).distance(95).strength(0.6))
+    .force('charge',  d3.forceManyBody().strength(-8000).theta(0.9))
     .force('collide', d3.forceCollide().radius(d => nodeRadius(d) + 12))
-    .force('center',  d3.forceCenter(0, 0))
+    .force('center',  d3.forceCenter(0, 0).strength(0.3))
     .alphaDecay(0.015)
     .velocityDecay(0.3);
 }
@@ -636,9 +636,26 @@ function renderAttackDAG(dag) {
   }
   if (noMsg) noMsg.style.display = 'none';
 
+  // Filter orphaned nodes — keep only nodes that have at least one edge,
+  // or are session/phase anchors that must always be present
+  const connectedNodeIds = new Set();
+  attackEdges.forEach(e => {
+    connectedNodeIds.add(e.from || e.source || e.source_id);
+    connectedNodeIds.add(e.to   || e.target || e.target_id);
+  });
+  const filteredNodes = attackNodes.filter(n =>
+    connectedNodeIds.has(n.node_id) ||
+    connectedNodeIds.has(n.id) ||
+    n.node_type === 'Session' ||
+    n.node_type === 'SessionRoot' ||
+    n.node_type === 'AttackBranch' ||
+    n.group === 'session' ||
+    n.group === 'phase'
+  );
+
   const container = document.getElementById('attack-canvas');
   if (!_svg) initGraph(container);
-  renderGraph({ attack_dag: { nodes: attackNodes, edges: attackEdges } });
+  renderGraph({ attack_dag: { nodes: filteredNodes, edges: attackEdges } });
 }
 
 function renderThinkingFlow(dag) {

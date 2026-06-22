@@ -3,6 +3,7 @@ RedTeam V9 MCP Service — 34 generalised pentest tools.
 FastMCP + Uvicorn on 127.0.0.1:6019, streamable HTTP transport.
 """
 import asyncio
+import html as _html
 import json
 import logging
 import os
@@ -1975,52 +1976,59 @@ def shell_exec(command: str, working_dir: str = "") -> dict:
         return _err(str(e))
 
 
+def _break_url(url):
+    if not url:
+        return url
+    return url.replace('https://', 'https[://]').replace('http://', 'http[://]')
+
+
 def _generate_poc(title: str, severity: str, endpoint: str, evidence: str):
     """Return (powershell_cmd, curl_cmd) for a finding based on title keywords."""
     title_lower = title.lower()
     ep = endpoint or "TARGET_URL"
+    brk_ep = _break_url(ep)
 
     if any(x in title_lower for x in ['sqli', 'sql injection', 'injection']):
-        ps = f"Invoke-WebRequest -Uri '{ep}' -Method POST -Body \"username=admin'--&password=x\" -UseBasicParsing"
-        cu = f"curl -s -X POST '{ep}' --data \"username=admin'--&password=x\" -v"
+        ps = f"Invoke-WebRequest -Uri '{brk_ep}' -Method POST -Body \"username=admin'--&password=x\" -UseBasicParsing"
+        cu = f"curl -s -X POST '{brk_ep}' --data \"username=admin'--&password=x\" -v"
 
     elif any(x in title_lower for x in ['xss', 'cross-site scripting', 'reflected']):
-        ps = f"Invoke-WebRequest -Uri '{ep}?q=<script>alert(document.domain)</script>' -UseBasicParsing"
-        cu = f"curl -s '{ep}?q=<script>alert(document.domain)</script>'"
+        ps = f"Invoke-WebRequest -Uri '{brk_ep}?q=<script>alert(document.domain)</script>' -UseBasicParsing"
+        cu = f"curl -s '{brk_ep}?q=<script>alert(document.domain)</script>'"
 
     elif any(x in title_lower for x in ['auth bypass', 'authentication bypass', 'default cred']):
-        ps = f"Invoke-WebRequest -Uri '{ep}' -Method POST -Body \"username=admin&password=admin\" -UseBasicParsing"
-        cu = f"curl -s -X POST '{ep}' --data \"username=admin&password=admin\" -c cookies.txt -v"
+        ps = f"Invoke-WebRequest -Uri '{brk_ep}' -Method POST -Body \"username=admin&password=admin\" -UseBasicParsing"
+        cu = f"curl -s -X POST '{brk_ep}' --data \"username=admin&password=admin\" -c cookies.txt -v"
 
     elif any(x in title_lower for x in ['idor', 'insecure direct object']):
-        ps = f"Invoke-WebRequest -Uri '{ep}' -Headers @{{Cookie=\"JSESSIONID=VICTIM_TOKEN\"}} -UseBasicParsing"
-        cu = f"curl -s '{ep}' -H \"Cookie: JSESSIONID=VICTIM_TOKEN\" -v"
+        ps = f"Invoke-WebRequest -Uri '{brk_ep}' -Headers @{{Cookie=\"JSESSIONID=VICTIM_TOKEN\"}} -UseBasicParsing"
+        cu = f"curl -s '{brk_ep}' -H \"Cookie: JSESSIONID=VICTIM_TOKEN\" -v"
 
     elif any(x in title_lower for x in ['csrf', 'cross-site request forgery']):
         ps = (f'# CSRF PoC — save as csrf_poc.html and open in browser\n'
-              f'$html = \'<form action="{ep}" method="POST"><input name="amount" value="9999"/>'
+              f'$html = \'<form action="{brk_ep}" method="POST"><input name="amount" value="9999"/>'
               f'<input type="submit"/></form><script>document.forms[0].submit()</script>\'\n'
               f'$html | Out-File csrf_poc.html\nStart-Process csrf_poc.html')
-        cu = f"curl -s -X POST '{ep}' --data \"amount=9999\" -H \"Origin: http://evil.com\" -v"
+        cu = f"curl -s -X POST '{brk_ep}' --data \"amount=9999\" -H \"Origin: http://evil.com\" -v"
 
     elif any(x in title_lower for x in ['session fixation', 'session']):
         ps = (f'# Step 1: Get session\n'
-              f"$r = Invoke-WebRequest -Uri '{ep}' -SessionVariable s -UseBasicParsing\n"
+              f"$r = Invoke-WebRequest -Uri '{brk_ep}' -SessionVariable s -UseBasicParsing\n"
               f'# Step 2: Authenticate with known session ID\n'
-              f"Invoke-WebRequest -Uri '{ep}/login' -Method POST -Body \"username=admin&password=admin\" -WebSession $s -UseBasicParsing")
-        cu = f"curl -s -c cookies.txt '{ep}'\ncurl -s -X POST '{ep}/login' --data \"username=admin&password=admin\" -b cookies.txt -v"
+              f"Invoke-WebRequest -Uri '{brk_ep}/login' -Method POST -Body \"username=admin&password=admin\" -WebSession $s -UseBasicParsing")
+        cu = f"curl -s -c cookies.txt '{brk_ep}'\ncurl -s -X POST '{brk_ep}/login' --data \"username=admin&password=admin\" -b cookies.txt -v"
 
     elif any(x in title_lower for x in ['missing header', 'security header', 'hsts', 'csp', 'x-frame']):
-        ps = f"(Invoke-WebRequest -Uri '{ep}' -UseBasicParsing).Headers | Format-Table"
-        cu = f"curl -s -I '{ep}' | grep -i \"security\\|hsts\\|csp\\|frame\\|content-type\""
+        ps = f"(Invoke-WebRequest -Uri '{brk_ep}' -UseBasicParsing).Headers | Format-Table"
+        cu = f"curl -s -I '{brk_ep}' | grep -i \"security\\|hsts\\|csp\\|frame\\|content-type\""
 
     elif any(x in title_lower for x in ['swagger', 'exposed panel', 'admin panel']):
-        ps = f"Invoke-WebRequest -Uri '{ep}' -UseBasicParsing | Select-Object StatusCode,Content"
-        cu = f"curl -s '{ep}' -v"
+        ps = f"Invoke-WebRequest -Uri '{brk_ep}' -UseBasicParsing | Select-Object StatusCode,Content"
+        cu = f"curl -s '{brk_ep}' -v"
 
     else:
-        ps = f"Invoke-WebRequest -Uri '{ep}' -UseBasicParsing -Verbose"
-        cu = f"curl -s -v '{ep}'"
+        ps = f"Invoke-WebRequest -Uri '{brk_ep}' -UseBasicParsing -Verbose"
+        cu = f"curl -s -v '{brk_ep}'"
 
     return ps, cu
 
@@ -2108,10 +2116,10 @@ def generate_report(session_id: str) -> dict:
     <div class="finding-section poc-block" onclick="return false">
       <div class="fsec-title">Proof of Concept</div>
       <div class="poc-label">PowerShell</div>
-      <pre class="poc-code" id="poc-ps-{fid}">{ps_cmd}</pre>
+      <pre class="poc-code" id="poc-ps-{fid}">{_html.escape(ps_cmd)}</pre>
       <button class="poc-copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('poc-ps-{fid}').innerText)">Copy PowerShell</button>
       <div class="poc-label" style="margin-top:8px">curl</div>
-      <pre class="poc-code" id="poc-curl-{fid}">{curl_cmd}</pre>
+      <pre class="poc-code" id="poc-curl-{fid}">{_html.escape(curl_cmd)}</pre>
       <button class="poc-copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('poc-curl-{fid}').innerText)">Copy curl</button>
     </div>
     <div class="finding-section">
@@ -2272,6 +2280,9 @@ def generate_report(session_id: str) -> dict:
   .poc-code a {{ pointer-events: none; color: inherit; text-decoration: none; }}
   .poc-block {{ user-select: text; }}
   pre.poc-code * {{ pointer-events: none; }}
+  pre.poc-code {{ white-space:pre-wrap; word-break:break-all; }}
+  pre.poc-code a {{ pointer-events:none !important;
+    color:#a8d8a8 !important; text-decoration:none !important; }}
   .poc-copy-btn {{ font-size: 0.75em; background: #2d3748; color: #e2e8f0;
                    border: none; border-radius: 3px; padding: 2px 8px;
                    cursor: pointer; margin-bottom: 4px; }}
@@ -2316,8 +2327,23 @@ def generate_report(session_id: str) -> dict:
     .finding-card {{ box-shadow: none; border: 1px solid #e2e8f0; }}
   }}
 </style>
+<style media="print">
+  button {{ display:none !important; }}
+  body {{ background:white !important; color:black !important; }}
+  .poc-code {{ background:#f5f5f5 !important; color:#333 !important; }}
+  @page {{ margin:2cm; }}
+</style>
 </head>
 <body>
+
+<div style="position:fixed;top:12px;right:12px;z-index:1000;
+  display:flex;gap:8px">
+  <button onclick="window.print()"
+    style="background:#1a3a5c;color:#fff;border:1px solid #4499ff;
+    padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px">
+    Export PDF
+  </button>
+</div>
 
 <!-- ── COVER PAGE ─────────────────────────────────────────────────────────── -->
 <div class="cover">
