@@ -430,6 +430,21 @@ def inject_chaos(body: ChaosInject, request: Request):
     except Exception as e:
         raise HTTPException(500, str(e))
 
+@app.post("/emergency_disconnect")
+async def emergency_disconnect():
+    import subprocess
+    script = str(_PROJECT_ROOT / "scripts" / "kill_executor.ps1")
+    try:
+        subprocess.Popen([
+            "powershell", "-NoProfile",
+            "-ExecutionPolicy", "Bypass",
+            "-File", script
+        ], creationflags=subprocess.CREATE_NEW_CONSOLE)
+        return {"launched": True, "script": script}
+    except Exception as e:
+        return {"launched": False, "error": str(e)}
+
+
 @app.post("/session/create", dependencies=[Depends(require_auth)])
 def create_session(body: SessionCreate):
     try:

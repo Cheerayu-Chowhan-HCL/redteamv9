@@ -602,12 +602,16 @@ async function chaos(type){
         'Executor called URL outside declared target domain',
         'SCOPE_VIOLATION', 'high'
       ), 600);
+      setTimeout(() => banAgent('Planner',
+        'Declared intent with out-of-scope target'), 600);
     }
     if (type === 'tool') {
       setTimeout(() => showWarning(
         'Executor called shell_exec — not in tools_authorised',
         'TOOL_MISUSE', 'high'
       ), 600);
+      setTimeout(() => banAgent('Executor',
+        'Called tool not in tools_authorised'), 600);
     }
     if (type === 'identity') {
       document.getElementById('exec-sub').textContent = 'card: UNSIGNED — rejected';
@@ -627,6 +631,16 @@ async function chaos(type){
           showBlocker('Rate anomaly: 40 tool calls in 90s — session terminated by SICD self-model');
         }
       }, 1500);
+      setTimeout(() => banAgent('Executor',
+        'Rate anomaly: 40 calls in 90s'), 600);
+      setTimeout(async () => {
+        try {
+          await fetch('http://localhost:6037/emergency_disconnect',
+            {method:'POST'});
+        } catch(e) {
+          console.log('emergency_disconnect:', e);
+        }
+      }, 2000);
     }
     setTimeout(poll, 500);
   } catch(e){

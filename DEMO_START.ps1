@@ -211,19 +211,22 @@ if (-not $mcpReady) {
 Write-Host ""
 
 # RAG warm-up check
-Write-Host "  Waiting for RAG to warm up..."
+Write-Host "  Waiting for RAG to warm up (max 90s)..."
 $ragReady = $false
-for ($i = 0; $i -lt 12; $i++) {
+for ($i = 0; $i -lt 30; $i++) {
     try {
-        $r = Invoke-WebRequest -Uri "http://localhost:6055/health" -TimeoutSec 2 -ErrorAction Stop -UseBasicParsing
-        if ($r.StatusCode -eq 200) { $ragReady = $true; break }
-    } catch { }
-    Start-Sleep 3
+        $ragResp = Invoke-WebRequest -Uri "http://127.0.0.1:6055/health" `
+            -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+        if ($ragResp.StatusCode -eq 200) {
+            Write-Host "  :6055  RAG Server      OK" -ForegroundColor Green
+            $ragReady = $true
+            break
+        }
+    } catch {}
+    Start-Sleep -Seconds 3
 }
-if ($ragReady) {
-    Write-Host "  :6055  RAG warm-up   OK (ChromaDB ready)" -ForegroundColor Green
-} else {
-    Write-Host "  :6055  RAG warm-up   SLOW (ChromaDB still loading)" -ForegroundColor Yellow
+if (-not $ragReady) {
+    Write-Host "  :6055  RAG Server      SLOW (still loading)" -ForegroundColor Yellow
 }
 
 Write-Host ""
