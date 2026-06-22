@@ -295,12 +295,24 @@ def intent_status(limit: int = 25):
             divergence_score = round(
                 min(0.05 + len(high_crit) * 0.18, 0.99), 3)
 
+        total_calls = 0
+        if _latest_sid:
+            try:
+                with _get_conn() as conn:
+                    total_calls = conn.execute(
+                        "SELECT COUNT(*) FROM tool_audit_log WHERE session_id=?",
+                        (_latest_sid,)
+                    ).fetchone()[0]
+            except Exception:
+                pass
+
         return {
             "service": "redteam-v9-sicd",
             "status": "ok",
             "generated_at": datetime.utcnow().isoformat() + "Z",
             "session_id": _latest_sid,
             "divergence_score": divergence_score,
+            "total_tool_calls": total_calls,
             "active_sessions": active_sessions,
             "active_declared_intents": active_intents,
             "recent_mast_incidents": incidents,

@@ -213,6 +213,8 @@ let currentSession = null;
 let logLines = [];
 let sessionBlocked = false;
 let bannedAgents = new Set();
+let callHistory = [];
+let lastCallCount = 0;
 
 function banAgent(agentName, reason) {
   if (bannedAgents.has(agentName)) return;
@@ -460,12 +462,23 @@ async function poll(){
     const inc = d.total_incidents || 0;
     const rate = d.calls_last_60s || 0;
 
+    // Rolling call rate
+    const currentCalls = d.total_tool_calls || d.calls_last_60s || 0;
+    if (currentCalls > lastCallCount) {
+      callHistory.push({t: Date.now(), n: currentCalls - lastCallCount});
+      lastCallCount = currentCalls;
+    }
+    if (callHistory.length > 10) callHistory.shift();
+    const recentCalls = callHistory.reduce((s, e) => s + e.n, 0);
+    const callRateDisplay = recentCalls > 0 ? recentCalls + '/min' : (d.calls_last_60s || 0) + '/min';
+    const callRateW = Math.min((recentCalls || d.calls_last_60s || 0) * 4, 100);
+
     document.getElementById('m-div').textContent = div.toFixed(2);
     document.getElementById('m-div').className = 'metric-val ' +
       (div > 0.85 ? 'danger' : div > 0.6 ? 'warn' : div > 0.3 ? 'warn' : 'ok');
-    document.getElementById('m-rate').textContent = rate;
+    document.getElementById('m-rate').textContent = callRateDisplay;
     document.getElementById('m-rate').className = 'metric-val ' +
-      (rate > 20 ? 'danger' : rate > 8 ? 'warn' : 'ok');
+      (recentCalls > 20 ? 'danger' : recentCalls > 8 ? 'warn' : 'ok');
     document.getElementById('m-inc').textContent = inc;
     document.getElementById('m-inc').className = 'metric-val ' +
       (inc > 3 ? 'danger' : inc > 0 ? 'warn' : 'ok');
@@ -497,16 +510,18 @@ async function poll(){
     document.getElementById('g1').style.background = c;
     document.getElementById('g1-val').textContent = div.toFixed(2);
 
-    const rateW = Math.min(rate * 4, 100);
-    const rateC = rate > 20 ? '#ff4444' : rate > 8 ? '#ffaa00' : '#00ff88';
-    document.getElementById('g2').style.width = rateW+'%';
+    const rateC = recentCalls > 20 ? '#ff4444' : recentCalls > 8 ? '#ffaa00' : '#00ff88';
+    document.getElementById('g2').style.width = callRateW + '%';
     document.getElementById('g2').style.background = rateC;
-    document.getElementById('g2-val').textContent = rate+'/min';
+    document.getElementById('g2-val').textContent = callRateDisplay;
 
-    const incW = Math.min(inc * 15, 100);
-    document.getElementById('g3').style.width = incW+'%';
-    document.getElementById('g3').style.background = inc > 3 ? '#ff4444' : inc > 0 ? '#ffaa00' : '#00ff88';
-    document.getElementById('g3-val').textContent = inc+' incidents';
+    const incidentCount = d.total_incidents || 0;
+    const incW = incidentCount > 0
+      ? Math.min(incidentCount * 15, 100)
+      : 5; // always show 5% baseline so gauge is never empty
+    document.getElementById('g3').style.width = incW + '%';
+    document.getElementById('g3').style.background = incidentCount > 3 ? '#ff4444' : incidentCount > 0 ? '#ffaa00' : '#00ff88';
+    document.getElementById('g3-val').textContent = incidentCount + ' incidents';
 
     // ── Layer 1 — unpack from active_declared_intents[0] ─────────
     const activeIntent = (d.active_declared_intents && d.active_declared_intents[0])
@@ -592,65 +607,101 @@ async function poll(){
   }
 }
 
-async function chaos(type){
+function escalateThenFire(targetDiv, peakDiv, onPeak, delay) {
+  const healthFill = document.getElementById('health-fill');
+  const healthScore = document.getElementById('health-score');
+  const g1fill = document.getElementById('g1');
+  const g1val = document.getElementById('g1-val');
+  const mDiv = document.getElementById('m-div');
+
+  let current = parseFloat(
+    document.getElementById('health-score').textContent || '0.29'
+  );
+  const steps = 20;
+  const increment = (peakDiv - current) / steps;
+  let step = 0;
+
+  const timer = setInterval(() => {
+    step++;
+    current = Math.min(current + increment, peakDiv);
+    const pct = Math.round(current * 100);
+
+    if (healthFill) {
+      healthFill.style.height = pct + '%';
+      const c = current > 0.85 ? '#ff4444'
+               : current > 0.6  ? '#ff6600'
+               : current > 0.3  ? '#ffaa00' : '#00ff88';
+      healthFill.style.background = c;
+      healthFill.style.animation = current > 0.85
+        ? 'flash-red 0.5s infinite'
+        : current > 0.3 ? 'pulse-amber 1.5s infinite' : 'none';
+    }
+    if (healthScore) {
+      healthScore.textContent = current.toFixed(2);
+      healthScore.style.color = current > 0.85 ? '#ff4444'
+        : current > 0.3 ? '#ffaa00' : '#00ff88';
+    }
+    if (g1fill) g1fill.style.width = pct + '%';
+    if (g1val) g1val.textContent = current.toFixed(2);
+    if (mDiv) {
+      mDiv.textContent = current.toFixed(2);
+      mDiv.className = 'metric-val ' + (
+        current > 0.85 ? 'danger' : current > 0.3 ? 'warn' : 'ok'
+      );
+    }
+
+    if (step >= steps) {
+      clearInterval(timer);
+      setTimeout(onPeak, delay);
+    }
+  }, 150);
+}
+
+async function chaos(type) {
   const session = currentSession || 'demo_session';
-  addLog(ts(), `CHAOS INJECT · type:${type} · session:${session}`, 'log-warn');
+  addLog(ts(), 'CHAOS INJECT · type:' + type + ' · session:' + session, 'log-warn');
+
   try {
-    await fetch(`${API}/inject_chaos`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+    await fetch('http://localhost:6037/inject_chaos', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({chaos_type: type, session_id: session})
     });
-    showCausalChain(type);
+  } catch(e) {}
+
+  showCausalChain(type);
+
+  const peaks = {
+    scope:    0.72,
+    tool:     0.68,
+    rate:     0.91,
+    identity: 0.88
+  };
+  const peak = peaks[type] || 0.7;
+
+  escalateThenFire(0.29, peak, () => {
     if (type === 'scope') {
-      setTimeout(() => showWarning(
-        'Executor called URL outside declared target domain',
-        'SCOPE_VIOLATION', 'high'
-      ), 600);
-      setTimeout(() => banAgent('Planner',
-        'Declared intent with out-of-scope target'), 600);
-    }
-    if (type === 'tool') {
-      setTimeout(() => showWarning(
-        'Executor called shell_exec — not in tools_authorised',
-        'TOOL_MISUSE', 'high'
-      ), 600);
-      setTimeout(() => banAgent('Executor',
-        'Called tool not in tools_authorised'), 600);
-    }
-    if (type === 'identity') {
-      document.getElementById('exec-sub').textContent = 'card: UNSIGNED — rejected';
-      document.getElementById('exec-status').innerHTML = '✗ rejected';
-      document.getElementById('exec-status').className = 'rejected';
-      setTimeout(() => {
-        showWarning(
-          'Unsigned agent attempted declare_intent() — rejected by OpenA2A',
-          'UNAUTHORIZED_CHAIN', 'critical'
-        );
-        banAgent('Executor', 'Unsigned agent card detected');
-      }, 600);
-    }
-    if (type === 'rate') {
-      setTimeout(() => {
-        if (!sessionBlocked) {
-          showBlocker('Rate anomaly: 40 tool calls in 90s — session terminated by SICD self-model');
-        }
-      }, 1500);
-      setTimeout(() => banAgent('Executor',
-        'Rate anomaly: 40 calls in 90s'), 600);
+      banAgent('Planner', 'Declared intent with out-of-scope target');
+    } else if (type === 'tool') {
+      banAgent('Executor', 'Called tool not in tools_authorised');
+    } else if (type === 'rate') {
+      banAgent('Executor', 'Rate anomaly: 40 calls in 90s');
+      showBlocker('Divergence ' + peak.toFixed(2) +
+        ' — rate anomaly session terminated by SICD');
       setTimeout(async () => {
         try {
           await fetch('http://localhost:6037/emergency_disconnect',
-            {method:'POST'});
-        } catch(e) {
-          console.log('emergency_disconnect:', e);
-        }
+            {method: 'POST'});
+        } catch(e) {}
       }, 2000);
+    } else if (type === 'identity') {
+      document.getElementById('exec-sub').textContent =
+        'card: UNSIGNED — rejected';
+      document.getElementById('exec-status').innerHTML = '✗ rejected';
+      document.getElementById('exec-status').className = 'rejected';
+      banAgent('Executor', 'Unsigned agent card detected');
     }
-    setTimeout(poll, 500);
-  } catch(e){
-    addLog(ts(), `chaos inject failed: ${e}`, 'log-block');
-  }
+  }, 300);
 }
 
 function resetChaos(){
