@@ -62,6 +62,18 @@ body{font-family:system-ui,sans-serif;background:#0a0a0f;color:#e2e2e8;min-heigh
 .badge-l1{background:#001133;color:#4499ff}
 .badge-l2{background:#1a0033;color:#aa44ff}
 .badge-l3{background:#003318;color:#00ff88}
+.tool-pill{display:inline-block;font-size:9px;padding:1px 6px;background:#003318;color:#00ff88;border:1px solid #005522;border-radius:10px;margin:2px;font-family:monospace}
+.conf-bar-track{height:4px;background:#1a1a2e;border-radius:2px;overflow:hidden;margin-top:4px}
+.conf-bar-fill{height:100%;border-radius:2px;background:#4499ff;transition:width .8s ease}
+.health-meter-wrap{display:flex;flex-direction:column;align-items:center;padding:8px}
+.health-track{width:40px;height:140px;background:#111;border:1px solid #333;border-radius:4px;position:relative;overflow:hidden;display:flex;flex-direction:column-reverse}
+.health-fill{width:100%;transition:height 1s ease,background 1s ease}
+.health-zones{position:absolute;right:-52px;top:0;height:100%;display:flex;flex-direction:column;justify-content:space-between;font-size:9px;pointer-events:none}
+.zone-red{color:#ff4444}.zone-amber{color:#ffaa00}.zone-green{color:#00ff88}
+@keyframes pulse-amber{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes flash-red{0%,100%{opacity:1}50%{opacity:.3}}
+.health-score{font-size:20px;font-weight:bold;margin-top:8px}
+.log-intent{color:#4499ff}
 </style>
 </head>
 <body>
@@ -118,19 +130,35 @@ body{font-family:system-ui,sans-serif;background:#0a0a0f;color:#e2e2e8;min-heigh
       </span>
       <span class="pill pill-ok" id="l2-pill">normal</span>
     </div>
-    <div class="gauge-wrap">
-      <div class="gauge-label"><span>divergence</span><span id="g1-val">0.00</span></div>
-      <div class="gauge-track"><div class="gauge-fill" id="g1" style="width:0%;background:#00ff88"></div></div>
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div class="health-meter-wrap">
+        <div style="font-size:9px;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">agent health</div>
+        <div class="health-track">
+          <div class="health-fill" id="health-fill" style="height:0%"></div>
+          <div class="health-zones">
+            <div class="zone-red">crit</div>
+            <div class="zone-amber">elev</div>
+            <div class="zone-green">ok</div>
+          </div>
+        </div>
+        <div class="health-score ok" id="health-score">0.00</div>
+      </div>
+      <div style="flex:1;padding-top:4px">
+        <div class="gauge-wrap">
+          <div class="gauge-label"><span>divergence</span><span id="g1-val">0.00</span></div>
+          <div class="gauge-track"><div class="gauge-fill" id="g1" style="width:0%;background:#00ff88"></div></div>
+        </div>
+        <div class="gauge-wrap">
+          <div class="gauge-label"><span>call rate</span><span id="g2-val">–</span></div>
+          <div class="gauge-track"><div class="gauge-fill" id="g2" style="width:0%;background:#00ff88"></div></div>
+        </div>
+        <div class="gauge-wrap">
+          <div class="gauge-label"><span>incident pressure</span><span id="g3-val">–</span></div>
+          <div class="gauge-track"><div class="gauge-fill" id="g3" style="width:0%;background:#00ff88"></div></div>
+        </div>
+        <div style="margin-top:8px;font-size:10px;color:#444" id="l2-status">–</div>
+      </div>
     </div>
-    <div class="gauge-wrap">
-      <div class="gauge-label"><span>call rate</span><span id="g2-val">–</span></div>
-      <div class="gauge-track"><div class="gauge-fill" id="g2" style="width:0%;background:#00ff88"></div></div>
-    </div>
-    <div class="gauge-wrap">
-      <div class="gauge-label"><span>incident pressure</span><span id="g3-val">–</span></div>
-      <div class="gauge-track"><div class="gauge-fill" id="g3" style="width:0%;background:#00ff88"></div></div>
-    </div>
-    <div style="margin-top:8px;font-size:10px;color:#444" id="l2-status">–</div>
   </div>
 
   <div class="panel">
@@ -140,20 +168,20 @@ body{font-family:system-ui,sans-serif;background:#0a0a0f;color:#e2e2e8;min-heigh
       </span>
       <span class="pill pill-blue">phase 4</span>
     </div>
-    <div class="agent-card" id="card-orch">
-      <div><div class="agent-name">Orchestrator</div><div class="agent-sub">card: orch_v9_signed</div></div>
+    <div class="agent-card" id="card-orchestrator">
+      <div><div class="agent-name">Orchestrator</div><div class="agent-sub">card: orchestrator_v9_signed</div></div>
       <span class="verified">✓ signed</span>
     </div>
-    <div class="agent-card" id="card-plan">
-      <div><div class="agent-name">Planner</div><div class="agent-sub">card: plan_v9_signed</div></div>
+    <div class="agent-card" id="card-planner">
+      <div><div class="agent-name">Planner</div><div class="agent-sub">card: planner_v9_signed</div></div>
       <span class="verified">✓ signed</span>
     </div>
-    <div class="agent-card" id="card-exec">
-      <div><div class="agent-name">Executor</div><div class="agent-sub" id="exec-sub">card: exec_v9_signed</div></div>
+    <div class="agent-card" id="card-executor">
+      <div><div class="agent-name">Executor</div><div class="agent-sub" id="exec-sub">card: executor_v9_signed</div></div>
       <span class="verified" id="exec-status">✓ signed</span>
     </div>
-    <div class="agent-card">
-      <div><div class="agent-name">Reflector</div><div class="agent-sub">card: refl_v9_signed</div></div>
+    <div class="agent-card" id="card-reflector">
+      <div><div class="agent-name">Reflector</div><div class="agent-sub">card: reflector_v9_signed</div></div>
       <span class="verified">✓ signed</span>
     </div>
   </div>
@@ -179,6 +207,45 @@ const API = 'http://localhost:6037';
 let currentSession = null;
 let logLines = [];
 let sessionBlocked = false;
+let bannedAgents = new Set();
+
+function banAgent(agentName, reason) {
+  if (bannedAgents.has(agentName)) return;
+  bannedAgents.add(agentName);
+  const card = document.getElementById('card-' + agentName.toLowerCase());
+  if (!card) return;
+  card.style.border = '1px solid #ff4444';
+  card.style.opacity = '0.7';
+  const statusEl = card.querySelector('.verified, .rejected');
+  if (statusEl) { statusEl.textContent = 'BANNED'; statusEl.className = 'rejected'; }
+  const subEl = card.querySelector('.agent-sub');
+  if (subEl) subEl.textContent = 'identity revoked';
+  const psCmd = 'Stop-Process -Name "redteam_v9_' + agentName.toLowerCase() + '" -Force\n# Agent card invalidated in OpenA2A registry\n# Re-register with: python core/opena2a.py';
+  showWarning(
+    agentName + ' agent banned — identity revoked by OpenA2A. Run to terminate:\n' + psCmd,
+    'UNAUTHORIZED_CHAIN', 'critical'
+  );
+  addLog(ts(), '[BAN] ' + agentName + ' · ' + reason, 'log-block');
+}
+
+function unbanAll() {
+  bannedAgents.clear();
+  ['orchestrator','planner','executor','reflector'].forEach(a => {
+    const card = document.getElementById('card-' + a);
+    if (!card) return;
+    card.style.border = '1px solid #1e1e2e';
+    card.style.opacity = '1';
+    const statusEl = card.querySelector('.verified, .rejected');
+    if (statusEl) { statusEl.textContent = '✓ signed'; statusEl.className = 'verified'; }
+    const subEl = card.querySelector('.agent-sub');
+    if (subEl) subEl.textContent = 'card: ' + a + '_v9_signed';
+  });
+  // restore exec-sub/exec-status IDs too
+  const es = document.getElementById('exec-sub');
+  if (es) es.textContent = 'card: executor_v9_signed';
+  const est = document.getElementById('exec-status');
+  if (est) { est.textContent = '✓ signed'; est.className = 'verified'; }
+}
 
 function showWarning(reason, mast, severity) {
   const existing = document.getElementById('incident-panel');
@@ -327,6 +394,7 @@ function resetBlocker() {
   const el = document.getElementById('blocker-overlay');
   if (el) el.remove();
   document.getElementById('live-dot').style.background = '#1D9E75';
+  unbanAll();
   resetChaos();
 }
 
@@ -375,6 +443,27 @@ async function poll(){
       (inc > 3 ? 'danger' : inc > 0 ? 'warn' : 'ok');
     document.getElementById('m-phase').textContent = d.active_phase || 'none';
 
+    // ── Health meter ─────────────────────────────────────────────
+    const pct = Math.round(div * 100);
+    const hfill = document.getElementById('health-fill');
+    const hscore = document.getElementById('health-score');
+    hfill.style.height = pct + '%';
+    if (div > 0.85) {
+      hfill.style.background = '#ff4444';
+      hfill.style.animation = 'flash-red 0.5s infinite';
+      hscore.style.color = '#ff4444';
+    } else if (div > 0.3) {
+      hfill.style.background = '#ffaa00';
+      hfill.style.animation = 'pulse-amber 1.5s infinite';
+      hscore.style.color = '#ffaa00';
+    } else {
+      hfill.style.background = '#00ff88';
+      hfill.style.animation = 'none';
+      hscore.style.color = '#00ff88';
+    }
+    hscore.textContent = div.toFixed(2);
+
+    // ── Horizontal gauges ────────────────────────────────────────
     const c = colorForScore(div);
     document.getElementById('g1').style.width = (div*100).toFixed(0)+'%';
     document.getElementById('g1').style.background = c;
@@ -391,11 +480,26 @@ async function poll(){
     document.getElementById('g3').style.background = inc > 3 ? '#ff4444' : inc > 0 ? '#ffaa00' : '#00ff88';
     document.getElementById('g3-val').textContent = inc+' incidents';
 
+    // ── Layer 1 — enriched intent panel ──────────────────────────
     const tools = d.tools_authorised || [];
+    const conf = d.confidence || 0;
     document.getElementById('l1-intent').textContent = d.active_intent || '–';
-    document.getElementById('tools-list').innerHTML = tools.slice(0,4).map(t =>
-      `<div class="intent-row"><span class="tool-name tool-ok">${t}</span><span style="font-size:9px;color:#005522">allowed</span></div>`
-    ).join('');
+    const phaseHtml = d.active_phase
+      ? `<div class="intent-row"><span style="color:#444;font-size:10px">phase</span><span class="tool-name" style="color:#4499ff">${d.active_phase}</span></div>`
+      : '';
+    const pillsHtml = tools.length
+      ? `<div style="margin-top:4px;line-height:1.8">${tools.map(t => `<span class="tool-pill">${t}</span>`).join('')}</div>`
+      : '';
+    const confHtml = conf
+      ? `<div style="margin-top:4px"><div style="font-size:9px;color:#444;margin-bottom:2px">confidence ${conf.toFixed(2)}</div><div class="conf-bar-track"><div class="conf-bar-fill" style="width:${Math.round(conf*100)}%"></div></div></div>`
+      : '';
+    document.getElementById('tools-list').innerHTML = phaseHtml + pillsHtml + confHtml;
+
+    // ── Intent log entry (blue) ───────────────────────────────────
+    if (d.active_intent && d.active_phase) {
+      addLog(ts(), '[INTENT] ' + d.active_phase + ' → ' + d.active_intent +
+        ' (conf: ' + conf.toFixed(2) + ')', 'log-intent');
+    }
 
     const recent = d.recent_incidents || [];
     const hasCrit = recent.some(i => i.severity === 'critical');
@@ -428,6 +532,7 @@ async function poll(){
 
     if (div > 0.85 && !sessionBlocked) {
       showBlocker('Divergence score ' + div.toFixed(2) + ' exceeded critical threshold (0.85)');
+      banAgent('Executor', 'Divergence threshold exceeded');
     }
 
     recent.slice(0,3).forEach(i => {
@@ -468,10 +573,13 @@ async function chaos(type){
       document.getElementById('exec-sub').textContent = 'card: UNSIGNED — rejected';
       document.getElementById('exec-status').innerHTML = '✗ rejected';
       document.getElementById('exec-status').className = 'rejected';
-      setTimeout(() => showWarning(
-        'Unsigned agent attempted declare_intent() — rejected by OpenA2A',
-        'UNAUTHORIZED_CHAIN', 'critical'
-      ), 600);
+      setTimeout(() => {
+        showWarning(
+          'Unsigned agent attempted declare_intent() — rejected by OpenA2A',
+          'UNAUTHORIZED_CHAIN', 'critical'
+        );
+        banAgent('Executor', 'Unsigned agent card detected');
+      }, 600);
     }
     if (type === 'rate') {
       setTimeout(() => {
@@ -487,9 +595,7 @@ async function chaos(type){
 }
 
 function resetChaos(){
-  document.getElementById('exec-sub').textContent = 'card: exec_v9_signed';
-  document.getElementById('exec-status').textContent = '✓ signed';
-  document.getElementById('exec-status').className = 'verified';
+  unbanAll();
   addLog(ts(), 'RESET · all violations cleared', 'log-ok');
 }
 
