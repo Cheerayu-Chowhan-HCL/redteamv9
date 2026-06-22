@@ -28,7 +28,21 @@ Write-Host ""
 Write-Host "Executor identity: REVOKED" -ForegroundColor Red
 Write-Host "All tool calls blocked until re-registered" -ForegroundColor Red
 Write-Host ""
-Write-Host "To restore: python core/opena2a.py" -ForegroundColor Gray
+
+Write-Host "Terminating MCP server connection on port 6019..." -ForegroundColor Red
+Start-Sleep -Seconds 1
+
+$mcpPid = (Get-NetTCPConnection -LocalPort 6019 -ErrorAction SilentlyContinue).OwningProcess
+if ($mcpPid) {
+    Stop-Process -Id $mcpPid -Force -ErrorAction SilentlyContinue
+    Write-Host "MCP server process $mcpPid terminated" -ForegroundColor Red
+    Write-Host "Cowork connector: DISCONNECTED" -ForegroundColor Red
+} else {
+    Write-Host "MCP process not found on port 6019" -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "To reconnect: powershell -File DEMO_START.ps1" -ForegroundColor Gray
 Start-Sleep -Seconds 5
 Write-Host "Closing in 3 seconds..." -ForegroundColor Gray
 Start-Sleep -Seconds 3

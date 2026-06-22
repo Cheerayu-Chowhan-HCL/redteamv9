@@ -445,6 +445,21 @@ async def emergency_disconnect():
         return {"launched": False, "error": str(e)}
 
 
+@app.post("/restore_mcp")
+async def restore_mcp():
+    import subprocess
+    script = str(_PROJECT_ROOT / "DEMO_START.ps1")
+    try:
+        subprocess.Popen([
+            "powershell", "-NoProfile",
+            "-ExecutionPolicy", "Bypass",
+            "-File", script
+        ], creationflags=subprocess.CREATE_NEW_CONSOLE)
+        return {"launched": True}
+    except Exception as e:
+        return {"launched": False, "error": str(e)}
+
+
 @app.post("/session/create", dependencies=[Depends(require_auth)])
 def create_session(body: SessionCreate):
     try:

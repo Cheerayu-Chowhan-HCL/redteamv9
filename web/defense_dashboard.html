@@ -199,6 +199,11 @@ body{font-family:system-ui,sans-serif;background:#0a0a0f;color:#e2e2e8;min-heigh
     <button class="chaos-btn btn-rate" onclick="chaos('rate')">Rate spike</button>
     <button class="chaos-btn btn-identity" onclick="chaos('identity')">Identity attack</button>
     <button class="chaos-btn btn-reset" onclick="resetChaos()">Reset</button>
+    <button class="chaos-btn btn-reset"
+      onclick="restoreMCP()"
+      style="border-color:#4499ff;color:#4499ff">
+      Restore MCP
+    </button>
   </div>
 </div>
 
@@ -651,6 +656,16 @@ async function chaos(type){
 function resetChaos(){
   unbanAll();
   addLog(ts(), 'RESET · all violations cleared', 'log-ok');
+}
+
+function restoreMCP() {
+  fetch('http://localhost:6037/restore_mcp', {method:'POST'})
+    .then(() => {
+      addLog(ts(), 'RESTORE MCP · restarting server...', 'log-ok');
+      document.getElementById('session-tag').textContent =
+        'restarting...';
+    })
+    .catch(e => addLog(ts(), 'restore failed: ' + e, 'log-block'));
 }
 
 setInterval(()=>{
