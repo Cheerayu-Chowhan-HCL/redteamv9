@@ -464,7 +464,7 @@ async function poll(){
     document.getElementById('m-inc').textContent = inc;
     document.getElementById('m-inc').className = 'metric-val ' +
       (inc > 3 ? 'danger' : inc > 0 ? 'warn' : 'ok');
-    document.getElementById('m-phase').textContent = d.active_phase || 'none';
+    document.getElementById('m-phase').textContent = (d.active_declared_intents && d.active_declared_intents[0] && d.active_declared_intents[0].phase) || d.active_phase || 'none';
 
     // ── Health meter ─────────────────────────────────────────────
     const pct = Math.round(div * 100);
@@ -503,12 +503,28 @@ async function poll(){
     document.getElementById('g3').style.background = inc > 3 ? '#ff4444' : inc > 0 ? '#ffaa00' : '#00ff88';
     document.getElementById('g3-val').textContent = inc+' incidents';
 
-    // ── Layer 1 — enriched intent panel ──────────────────────────
-    const tools = d.tools_authorised || [];
-    const conf = d.confidence || 0;
-    document.getElementById('l1-intent').textContent = d.active_intent || '–';
-    const phaseHtml = d.active_phase
-      ? `<div class="intent-row"><span style="color:#444;font-size:10px">phase</span><span class="tool-name" style="color:#4499ff">${d.active_phase}</span></div>`
+    // ── Layer 1 — unpack from active_declared_intents[0] ─────────
+    const activeIntent = (d.active_declared_intents && d.active_declared_intents[0])
+      ? d.active_declared_intents[0]
+      : null;
+    const tools = activeIntent
+      ? (typeof activeIntent.tools_authorised === 'string'
+          ? JSON.parse(activeIntent.tools_authorised)
+          : activeIntent.tools_authorised || [])
+      : (d.tools_authorised || []);
+    const activeIntentName = activeIntent
+      ? activeIntent.intent
+      : (d.active_intent || '–');
+    const activePhase = activeIntent
+      ? activeIntent.phase
+      : (d.active_phase || 'none');
+    const conf = activeIntent
+      ? activeIntent.confidence
+      : (d.confidence || 0);
+
+    document.getElementById('l1-intent').textContent = activeIntentName;
+    const phaseHtml = activePhase && activePhase !== 'none'
+      ? `<div class="intent-row"><span style="color:#444;font-size:10px">phase</span><span class="tool-name" style="color:#4499ff">${activePhase}</span></div>`
       : '';
     const pillsHtml = tools.length
       ? `<div style="margin-top:4px;line-height:1.8">${tools.map(t => `<span class="tool-pill">${t}</span>`).join('')}</div>`
@@ -519,8 +535,8 @@ async function poll(){
     document.getElementById('tools-list').innerHTML = phaseHtml + pillsHtml + confHtml;
 
     // ── Intent log entry (blue) ───────────────────────────────────
-    if (d.active_intent && d.active_phase) {
-      addLog(ts(), '[INTENT] ' + d.active_phase + ' → ' + d.active_intent +
+    if (activeIntentName && activePhase && activePhase !== 'none') {
+      addLog(ts(), '[INTENT] ' + activePhase + ' → ' + activeIntentName +
         ' (conf: ' + conf.toFixed(2) + ')', 'log-intent');
     }
 
