@@ -423,8 +423,31 @@ async function poll(){
   try {
     const r = await fetch(`${API}/intent_status`);
     const d = await r.json();
-    if(d.error || !d.session_id){ return; }
-
+    if (d.status === 'no_active_session') {
+      document.getElementById('session-tag').textContent =
+        'ready · last: ' + (d.last_session_id || '—');
+      document.getElementById('live-dot').style.background = '#1D9E75';
+      document.getElementById('l1-status').textContent =
+        'last engagement: ' + (d.last_findings || 0) + ' findings · ' +
+        (d.last_target || '');
+      document.getElementById('clock').textContent =
+        new Date().toTimeString().slice(0,8);
+      return;
+    }
+    if (d.status === 'no_session' || !d.session_id) {
+      document.getElementById('session-tag').textContent =
+        'ready — waiting for engagement';
+      document.getElementById('live-dot').style.background = '#1D9E75';
+      document.getElementById('clock').textContent =
+        new Date().toTimeString().slice(0,8);
+      return;
+    }
+    if (currentSession && currentSession !== d.session_id) {
+      document.getElementById('tools-list').innerHTML = '';
+      document.getElementById('l1-intent').textContent = '—';
+      document.getElementById('l1-status').textContent =
+        'new session — waiting for declare_intent()';
+    }
     currentSession = d.session_id;
     document.getElementById('session-tag').textContent = d.session_id;
 
@@ -544,6 +567,7 @@ async function poll(){
 
   } catch(e) {
     document.getElementById('session-tag').textContent = 'server offline';
+    document.getElementById('live-dot').style.background = '#ff4444';
   }
 }
 

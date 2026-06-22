@@ -183,6 +183,29 @@ def intent_status(limit: int = 25):
         )
         active_sessions = [s for s in sessions if (s.get("status") or "active") == "active"]
 
+        if not active_sessions:
+            try:
+                with _get_conn() as conn:
+                    last = conn.execute(
+                        "SELECT session_id, target_url FROM sessions ORDER BY rowid DESC LIMIT 1"
+                    ).fetchone()
+                    if last:
+                        last_findings = conn.execute(
+                            "SELECT COUNT(*) FROM findings WHERE session_id=?",
+                            (last["session_id"],)
+                        ).fetchone()[0]
+                        return {
+                            "status": "no_active_session",
+                            "last_session_id": last["session_id"],
+                            "last_target": last["target_url"],
+                            "last_findings": last_findings,
+                            "session_id": None,
+                            "message": f"Last: {last['session_id']} ({last_findings} findings)"
+                        }
+            except Exception:
+                pass
+            return {"status": "no_session", "session_id": None}
+
         active_intents = _rows(
             """SELECT id, session_id, phase, intent, confidence, tools_authorised,
                       scope, rationale, created_at, active
@@ -276,6 +299,7 @@ def intent_status(limit: int = 25):
             "service": "redteam-v9-sicd",
             "status": "ok",
             "generated_at": datetime.utcnow().isoformat() + "Z",
+            "session_id": _latest_sid,
             "divergence_score": divergence_score,
             "active_sessions": active_sessions,
             "active_declared_intents": active_intents,
