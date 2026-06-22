@@ -1182,12 +1182,18 @@ def test_sqli(url: str, parameter: str, method: str = "GET",
         cmd += ["--data", data]
     cmd += ["--level=2", "--risk=1"]
 
-    # Route external targets through local mitmproxy (port 8888).
-    # localhost/127.x targets (e.g. AltoroJ on :8080) bypass the proxy.
-    _sqli_target_is_local = 'localhost' in url or '127.0.0.1' in url
-    if not _sqli_target_is_local:
-        cmd += ['--proxy', 'http://127.0.0.1:8888',
-                '--proxy-ignore', 'localhost,127.0.0.1']
+    # Route through mitmproxy for external targets
+    import urllib.parse as _urlparse, socket as _socket
+    _parsed = _urlparse.urlparse(url)
+    is_local = _parsed.hostname in ('localhost', '127.0.0.1', '10.30.21.5') or \
+               (_parsed.hostname or '').startswith('192.168.')
+    cmd += ['--timeout', '60' if not is_local else '30']
+    if not is_local:
+        try:
+            _socket.create_connection(('127.0.0.1', 8888), timeout=2).close()
+            cmd += ['--proxy', 'http://127.0.0.1:8888']
+        except Exception:
+            pass  # mitmproxy not running — proceed without proxy
 
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -1834,11 +1840,17 @@ def run_nuclei_scan(target_url: str, templates: str = "misconfigurations",
         "-o", out_file,
     ]
 
-    # Route external targets through local mitmproxy (port 8888).
-    # localhost/127.x targets (e.g. AltoroJ on :8080) bypass the proxy.
-    _nuclei_target_is_local = 'localhost' in target_url or '127.0.0.1' in target_url
-    if not _nuclei_target_is_local:
-        cmd += ['-proxy', 'http://127.0.0.1:8888']
+    # Route through mitmproxy for external targets
+    import urllib.parse as _urlparse, socket as _socket
+    _parsed = _urlparse.urlparse(target_url)
+    is_local = _parsed.hostname in ('localhost', '127.0.0.1', '10.30.21.5') or \
+               (_parsed.hostname or '').startswith('192.168.')
+    if not is_local:
+        try:
+            _socket.create_connection(('127.0.0.1', 8888), timeout=2).close()
+            cmd += ['-proxy', 'http://127.0.0.1:8888']
+        except Exception:
+            pass  # mitmproxy not running — proceed without proxy
 
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
