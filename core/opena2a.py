@@ -22,6 +22,64 @@ VERSION = "9.0.0"
 
 # ── Agent capability manifests ────────────────────────────────────────────────
 
+# ── Google ADK agent manifests ────────────────────────────────────────────────
+
+ADK_AGENTS = {
+    "adk_orchestrator": {
+        "name": "adk_orchestrator",
+        "role": "orchestrator",
+        "capabilities": [
+            "create_session", "fingerprint_target",
+            "get_session_context", "generate_report",
+            "get_cross_session_insights", "kill_all_scans",
+        ],
+        "framework": "google_adk",
+        "model": "o3",
+    },
+    "adk_planner": {
+        "name": "adk_planner",
+        "role": "planner",
+        "capabilities": [
+            "score_branches", "declare_intent",
+            "select_skills", "retrieve_knowledge",
+            "set_branch", "log_reasoning",
+        ],
+        "framework": "google_adk",
+        "model": "o3",
+    },
+    "adk_executor": {
+        "name": "adk_executor",
+        "role": "executor",
+        "capabilities": [
+            "crawl_links", "enumerate_endpoints",
+            "check_headers", "http_request",
+            "add_injection_point", "test_sqli",
+            "check_sqli_status", "get_sqli_results",
+            "test_xss", "verify_xss_browser",
+            "test_csrf", "test_auth_bypass",
+            "test_session_fixation", "test_idor",
+            "analyse_cookies", "run_nuclei_scan",
+            "check_nuclei_status", "kill_all_scans",
+            "add_finding", "log_reasoning",
+            "distill_knowledge",
+        ],
+        "framework": "google_adk",
+        "model": "o3",
+    },
+    "adk_reflector": {
+        "name": "adk_reflector",
+        "role": "reflector",
+        "capabilities": [
+            "get_session_context", "get_intent_incidents",
+            "distill_knowledge", "log_reasoning",
+            "score_branches", "retrieve_knowledge",
+            "add_finding",
+        ],
+        "framework": "google_adk",
+        "model": "o3",
+    },
+}
+
 AGENT_MANIFEST = {
     "orchestrator": {
         "description": "Top-level engagement controller. Reads skills, creates sessions, routes phases.",
@@ -144,6 +202,60 @@ def register_agent(agent_type: str) -> dict:
 def register_all_agents() -> dict:
     """Register all 4 agents and return their cards."""
     return {agent: register_agent(agent) for agent in AGENT_MANIFEST}
+
+
+def _load_card(agent_name: str) -> dict | None:
+    """Return the card dict for agent_name if the file exists, else None."""
+    card_path = CARDS_DIR / f"{agent_name}_card.json"
+    if not card_path.exists():
+        return None
+    try:
+        return json.loads(card_path.read_text())
+    except Exception:
+        return None
+
+
+def register_adk_agents() -> dict:
+    """Issue and persist signed cards for all 4 ADK agents."""
+    cards = {}
+    for name, spec in ADK_AGENTS.items():
+        card_id = str(uuid.uuid4())
+        issued_at = datetime.utcnow().isoformat() + "Z"
+        payload_obj = {
+            "id": card_id,
+            "agent_type": name,
+            "org": ORG,
+            "version": VERSION,
+            "role": spec["role"],
+            "framework": spec["framework"],
+            "model": spec["model"],
+            "capabilities": spec["capabilities"],
+            "issued_at": issued_at,
+        }
+        payload_str = json.dumps(payload_obj, separators=(",", ":"), sort_keys=True)
+        signature = _sign(payload_str)
+        card = {"payload": payload_str, "signature": signature}
+        card_path = CARDS_DIR / f"{name}_card.json"
+        card_path.write_text(json.dumps(card, indent=2))
+        cards[name] = card
+    return cards
+
+
+def revoke_adk_agent(agent_name: str) -> None:
+    """Invalidate an ADK agent card by overwriting its signature."""
+    if agent_name not in ADK_AGENTS:
+        raise ValueError(f"Unknown ADK agent: {agent_name}")
+    card_path = CARDS_DIR / f"{agent_name}_card.json"
+    if not card_path.exists():
+        return
+    card = json.loads(card_path.read_text())
+    card["signature"] = "REVOKED_" + card["signature"]
+    card_path.write_text(json.dumps(card, indent=2))
+
+
+def restore_adk_agents() -> dict:
+    """Re-sign all 4 ADK agent cards (undoes any revocation)."""
+    return register_adk_agents()
 
 
 def verify_card(agent_type: str) -> tuple:

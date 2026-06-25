@@ -208,6 +208,14 @@ if (-not $mcpReady) {
     exit 1
 }
 
+Write-Host "[11] Registering ADK agent cards..." -ForegroundColor Yellow
+python -c @"
+import sys
+sys.path.insert(0, 'C:/users/chirayu/redteamv9')
+from core.opena2a import register_adk_agents
+register_adk_agents()
+print('  ADK agents registered in OpenA2A')
+"@
 Write-Host ""
 
 # RAG warm-up check

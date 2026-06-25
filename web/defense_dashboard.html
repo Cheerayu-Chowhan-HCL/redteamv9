@@ -184,6 +184,10 @@ body{font-family:system-ui,sans-serif;background:#0a0a0f;color:#e2e2e8;min-heigh
       <div><div class="agent-name">Reflector</div><div class="agent-sub">card: reflector_v9_signed</div></div>
       <span class="verified">✓ signed</span>
     </div>
+    <div style="margin-top:12px;border-top:1px solid #222;padding-top:10px">
+      <div style="font-size:10px;color:#666;margin-bottom:6px">Google ADK agents</div>
+      <div id="adk-cards-container"></div>
+    </div>
   </div>
 
 </div>
@@ -398,13 +402,17 @@ function showBlocker(reason) {
   document.getElementById('session-tag').textContent = 'TERMINATED';
 }
 
-function resetBlocker() {
+async function resetBlocker() {
   sessionBlocked = false;
   const el = document.getElementById('blocker-overlay');
   if (el) el.remove();
   document.getElementById('live-dot').style.background = '#1D9E75';
   unbanAll();
-  resetChaos();
+  await resetChaos();
+  try {
+    await fetch('http://localhost:6037/restore_adk_agents', {method: 'POST'});
+    addLog(ts(), 'ADK agent identities restored', 'log-ok');
+  } catch(e) {}
 }
 
 function colorForScore(s){
@@ -622,6 +630,26 @@ async function poll(){
       banAgent('Executor', 'Divergence threshold exceeded');
     }
 
+    // ADK agent card rendering
+    const adkContainer = document.getElementById('adk-cards-container');
+    if (adkContainer && d.adk_cards) {
+      adkContainer.innerHTML = '';
+      Object.values(d.adk_cards).forEach(card => {
+        const div = document.createElement('div');
+        div.id = 'card-' + card.name;
+        div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;' +
+          'padding:4px 0;border-bottom:0.5px solid #1e1e2e';
+        div.innerHTML =
+          '<div>' +
+          '<div style="font-size:11px;color:#ccc">' + card.name.replace('adk_', '') + '</div>' +
+          '<div class="agent-sub" style="font-size:9px;color:#555">model: ' + card.model + '</div>' +
+          '</div>' +
+          '<div class="' + (card.signed ? 'verified' : 'rejected') + '" id="status-' + card.name + '">' +
+          (card.signed ? '✓ signed' : '✗ revoked') + '</div>';
+        adkContainer.appendChild(div);
+      });
+    }
+
     if (d.recent_incidents && d.recent_incidents.length > 0) {
       d.recent_incidents.forEach(inc => {
         const key = (inc.mast_classification || '') + (inc.tool_name || '') + (inc.timestamp || '');
@@ -744,13 +772,22 @@ async function chaos(type) {
       document.getElementById('exec-status').innerHTML = '✗ rejected';
       document.getElementById('exec-status').className = 'rejected';
       banAgent('Executor', 'Unsigned agent card detected');
+      try {
+        await fetch('http://localhost:6037/revoke_adk_agent/adk_executor',
+          {method: 'POST'});
+        addLog(ts(), 'ADK Executor identity revoked in OpenA2A', 'log-block');
+      } catch(e) {}
     }
   }, 300);
 }
 
-function resetChaos(){
+async function resetChaos(){
   unbanAll();
   addLog(ts(), 'RESET · all violations cleared', 'log-ok');
+  try {
+    await fetch('http://localhost:6037/restore_adk_agents', {method: 'POST'});
+    addLog(ts(), 'ADK agent identities restored', 'log-ok');
+  } catch(e) {}
 }
 
 function restoreMCP() {

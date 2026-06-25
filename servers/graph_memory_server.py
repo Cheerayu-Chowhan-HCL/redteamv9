@@ -338,6 +338,31 @@ def intent_status(limit: int = 25):
             except Exception:
                 pass
 
+        # ADK agent card status
+        adk_cards = {}
+        try:
+            from core.opena2a import ADK_AGENTS, _load_card
+            for name in ADK_AGENTS:
+                card = _load_card(name)
+                signed = False
+                if card is not None:
+                    import hmac as _hmac, hashlib as _hs
+                    from core.opena2a import SIGNING_KEY
+                    expected = _hmac.new(SIGNING_KEY,
+                                        card["payload"].encode(),
+                                        _hs.sha256).hexdigest()
+                    signed = _hmac.compare_digest(
+                        card.get("signature", ""), expected)
+                adk_cards[name] = {
+                    "signed": signed,
+                    "name": name,
+                    "role": ADK_AGENTS[name]["role"],
+                    "framework": "google_adk",
+                    "model": ADK_AGENTS[name]["model"],
+                }
+        except Exception:
+            pass
+
         return {
             "service": "redteam-v9-sicd",
             "status": "ok",
@@ -352,6 +377,7 @@ def intent_status(limit: int = 25):
             "active_declared_intents": active_intents,
             "recent_mast_incidents": incidents,
             "recent_tool_audit_events": audit_events,
+            "adk_cards": adk_cards,
             "summary": summary,
         }
     except Exception as e:
@@ -505,6 +531,26 @@ async def restore_mcp():
         return {"launched": True}
     except Exception as e:
         return {"launched": False, "error": str(e)}
+
+
+@app.post("/revoke_adk_agent/{agent_name}")
+async def revoke_adk_agent_endpoint(agent_name: str):
+    try:
+        from core.opena2a import revoke_adk_agent
+        revoke_adk_agent(agent_name)
+        return {"revoked": True, "agent": agent_name}
+    except Exception as e:
+        return {"revoked": False, "error": str(e)}
+
+
+@app.post("/restore_adk_agents")
+async def restore_adk_agents_endpoint():
+    try:
+        from core.opena2a import restore_adk_agents
+        restore_adk_agents()
+        return {"restored": True}
+    except Exception as e:
+        return {"restored": False, "error": str(e)}
 
 
 @app.post("/session/create", dependencies=[Depends(require_auth)])
