@@ -213,6 +213,8 @@ let currentSession = null;
 let logLines = [];
 let sessionBlocked = false;
 let bannedAgents = new Set();
+let shownIncidents = new Set();
+let lastData = null;
 let callHistory = [];
 let lastCallCount = 0;
 
@@ -412,13 +414,38 @@ function colorForScore(s){
   return '#00ff88';
 }
 
+function getLogClass(text) {
+  if (text.includes('MAST:'))     return 'log-block';
+  if (text.includes('[INTENT]'))  return 'log-intent';
+  if (text.includes('CHAOS'))     return 'log-warn';
+  if (text.includes('BAN'))       return 'log-block';
+  if (text.includes('RESET'))     return 'log-ok';
+  if (text.includes('REPORT'))    return 'log-ok';
+  if (text.includes('COMPLETE'))  return 'log-ok';
+  return 'log-ok';
+}
+
+function getLogLabel(text) {
+  if (text.includes('MAST:'))     return 'VIOLATION';
+  if (text.includes('[INTENT]'))  return 'INTENT';
+  if (text.includes('CHAOS'))     return 'CHAOS';
+  if (text.includes('BAN'))       return 'BAN';
+  if (text.includes('RESET'))     return 'RESET';
+  if (text.includes('REPORT'))    return 'REPORT';
+  return 'LOG';
+}
+
 function addLog(time, msg, cls){
   logLines.push({time, msg, cls});
   if(logLines.length > 50) logLines.shift();
   const el = document.getElementById('log');
-  el.innerHTML = logLines.map(l =>
-    `<div class="log-entry"><span class="log-time">${l.time}</span><span class="${l.cls}">${l.msg}</span></div>`
-  ).join('');
+  el.innerHTML = logLines.map(l => {
+    const label = getLogLabel(l.msg);
+    const lc    = getLogClass(l.msg);
+    return `<div class="log-entry"><span class="log-time">${l.time}</span>` +
+      `<span class="${lc}" style="font-size:9px;padding:1px 5px;border-radius:3px;flex-shrink:0;font-weight:600;margin-right:4px">${label}</span>` +
+      `<span class="${l.cls}">${l.msg}</span></div>`;
+  }).join('');
   el.scrollTop = el.scrollHeight;
 }
 
@@ -430,6 +457,7 @@ async function poll(){
   try {
     const r = await fetch(`${API}/intent_status`);
     const d = await r.json();
+    lastData = d;
     if (d.status === 'no_active_session') {
       document.getElementById('session-tag').textContent =
         'ready · last: ' + (d.last_session_id || '—');
@@ -594,12 +622,22 @@ async function poll(){
       banAgent('Executor', 'Divergence threshold exceeded');
     }
 
-    recent.slice(0,3).forEach(i => {
-      const cls = i.severity === 'critical' ? 'log-block' :
-                  i.severity === 'high' ? 'log-block' : 'log-warn';
-      addLog(i.time ? i.time.slice(11,19) : ts(),
-        `${i.mast} · ${i.tool} · severity:${i.severity} · ${i.response}`, cls);
-    });
+    if (d.recent_incidents && d.recent_incidents.length > 0) {
+      d.recent_incidents.forEach(inc => {
+        const key = (inc.mast_classification || '') + (inc.tool_name || '') + (inc.timestamp || '');
+        if (!shownIncidents.has(key)) {
+          shownIncidents.add(key);
+          const color = inc.severity === 'critical' ? 'log-block'
+                      : inc.severity === 'high'     ? 'log-warn'
+                      :                               'log-ok';
+          addLog(ts(),
+            'MAST:' + (inc.mast_classification || 'unknown')
+            + ' · ' + (inc.tool_name || '?')
+            + ' · ' + (inc.severity || 'low'),
+            color);
+        }
+      });
+    }
 
   } catch(e) {
     document.getElementById('session-tag').textContent = 'server offline';
@@ -658,6 +696,12 @@ function escalateThenFire(targetDiv, peakDiv, onPeak, delay) {
 }
 
 async function chaos(type) {
+  addLog(ts(), 'CHAOS INJECT in 3s · type:' + type, 'log-warn');
+  await new Promise(r => setTimeout(r, 1000));
+  addLog(ts(), 'CHAOS INJECT in 2s · type:' + type, 'log-warn');
+  await new Promise(r => setTimeout(r, 1000));
+  addLog(ts(), 'CHAOS INJECT in 1s · type:' + type, 'log-warn');
+  await new Promise(r => setTimeout(r, 1000));
   const session = currentSession || 'demo_session';
   addLog(ts(), 'CHAOS INJECT · type:' + type + ' · session:' + session, 'log-warn');
 
@@ -723,6 +767,18 @@ setInterval(()=>{
   document.getElementById('clock').textContent =
     new Date().toTimeString().slice(0,8);
 }, 1000);
+
+document.getElementById('m-inc').style.cursor = 'pointer';
+document.getElementById('m-inc').onclick = () => {
+  if (!lastData || !lastData.recent_incidents || !lastData.recent_incidents.length) return;
+  let msg = 'Recent MAST incidents:\n\n';
+  lastData.recent_incidents.forEach(inc => {
+    msg += (inc.mast_classification || 'unknown')
+         + ' · ' + (inc.tool_name || '?')
+         + ' · ' + (inc.severity || 'low') + '\n';
+  });
+  showWarning(msg, 'MAST_SUMMARY', 'info');
+};
 
 poll();
 setInterval(poll, 2000);

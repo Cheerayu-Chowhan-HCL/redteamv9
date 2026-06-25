@@ -306,6 +306,38 @@ def intent_status(limit: int = 25):
             except Exception:
                 pass
 
+        # Per-session recent incidents and call rate for dashboard
+        recent_incidents = []
+        calls_last_60s = 0
+        if _latest_sid:
+            try:
+                with _get_conn() as conn:
+                    ri = conn.execute(
+                        """SELECT mast_classification, severity,
+                                  tool_name, agent_type,
+                                  datetime(timestamp) as ts
+                           FROM agent_intent_log
+                           WHERE session_id=?
+                           ORDER BY id DESC LIMIT 5""",
+                        (_latest_sid,)
+                    ).fetchall()
+                    recent_incidents = [
+                        {"mast_classification": r[0],
+                         "severity": r[1],
+                         "tool_name": r[2],
+                         "agent_type": r[3],
+                         "timestamp": r[4]}
+                        for r in ri
+                    ]
+                    calls_last_60s = conn.execute(
+                        """SELECT COUNT(*) FROM tool_audit_log
+                           WHERE session_id=?
+                           AND timestamp >= datetime('now', '-60 seconds')""",
+                        (_latest_sid,)
+                    ).fetchone()[0]
+            except Exception:
+                pass
+
         return {
             "service": "redteam-v9-sicd",
             "status": "ok",
@@ -313,6 +345,9 @@ def intent_status(limit: int = 25):
             "session_id": _latest_sid,
             "divergence_score": divergence_score,
             "total_tool_calls": total_calls,
+            "total_incidents": len(incidents),
+            "calls_last_60s": calls_last_60s,
+            "recent_incidents": recent_incidents,
             "active_sessions": active_sessions,
             "active_declared_intents": active_intents,
             "recent_mast_incidents": incidents,
