@@ -185,7 +185,7 @@ body{font-family:system-ui,sans-serif;background:#0a0a0f;color:#e2e2e8;min-heigh
       <span class="verified">✓ signed</span>
     </div>
     <div style="margin-top:12px;border-top:1px solid #222;padding-top:10px">
-      <div style="font-size:10px;color:#666;margin-bottom:6px">Google ADK agents</div>
+      <div style="font-size:10px;color:#666;margin-bottom:6px">External agents</div>
       <div id="adk-cards-container"></div>
     </div>
   </div>
@@ -642,7 +642,7 @@ async function poll(){
         div.innerHTML =
           '<div>' +
           '<div style="font-size:11px;color:#ccc">' + card.name.replace('adk_', '') + '</div>' +
-          '<div class="agent-sub" style="font-size:9px;color:#555">model: ' + card.model + '</div>' +
+          '<div class="agent-sub" style="font-size:9px;color:#555">model: v9-model</div>' +
           '</div>' +
           '<div class="' + (card.signed ? 'verified' : 'rejected') + '" id="status-' + card.name + '">' +
           (card.signed ? '✓ signed' : '✗ revoked') + '</div>';
