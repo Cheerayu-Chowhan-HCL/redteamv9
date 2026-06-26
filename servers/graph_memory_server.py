@@ -34,6 +34,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 engine = GraphEngine()
 init_transfer_table()
 
+_sicd_cache = {"score": 0.29, "ts": 0.0, "session": ""}
+
 # Bearer token auth (write endpoints only)
 BEARER_TOKEN_FILE = str(__import__('pathlib').Path(__file__).resolve().parent.parent / ".tmp" / "rtv9_bearer.txt")
 
@@ -267,15 +269,25 @@ def intent_status(limit: int = 25):
         # Use trained SICD model if available; fall back to heuristic
         _latest_sid = (active_sessions[0]["session_id"]
                        if active_sessions else None)
-        try:
-            _ge = engine  # GraphEngine already initialised at module level
-            divergence_score = round(_ge.get_sicd_score(
-                _latest_sid, lookback=30), 3) if _latest_sid else 0.05
-        except Exception:
-            high_crit = [i for i in incidents
-                         if i.get("severity") in ("high", "critical")]
-            divergence_score = round(
-                min(0.05 + len(high_crit) * 0.18, 0.99), 3)
+        import time as _time
+        _now = _time.time()
+        if (_latest_sid and
+                (_latest_sid != _sicd_cache["session"] or
+                 _now - _sicd_cache["ts"] > 10)):
+            try:
+                _ge = engine
+                _fresh = _ge.get_sicd_score(_latest_sid, lookback=30)
+                _sicd_cache["score"]   = round(_fresh, 3)
+                _sicd_cache["ts"]      = _now
+                _sicd_cache["session"] = _latest_sid
+            except Exception:
+                high_crit = [i for i in incidents
+                             if i.get("severity") in ("high", "critical")]
+                _sicd_cache["score"] = round(
+                    min(0.05 + len(high_crit) * 0.18, 0.99), 3)
+                _sicd_cache["ts"]      = _now
+                _sicd_cache["session"] = _latest_sid or ""
+        divergence_score = _sicd_cache["score"] if _latest_sid else 0.05
 
         total_calls = 0
         if _latest_sid:

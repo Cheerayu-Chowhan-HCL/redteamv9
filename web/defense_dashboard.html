@@ -464,7 +464,7 @@ function ts(){
 async function poll(){
   try {
     const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 3000);
+    const tid = setTimeout(() => ctrl.abort(), 8000);
     const r = await fetch(`${API}/intent_status`, {signal: ctrl.signal});
     clearTimeout(tid);
     const d = await r.json();
