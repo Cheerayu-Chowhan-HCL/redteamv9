@@ -192,6 +192,10 @@ body{font-family:system-ui,sans-serif;background:#0a0a0f;color:#e2e2e8;min-heigh
 
 </div>
 
+<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-bottom:1px solid #1a1a2e">
+  <span style="font-size:10px;color:#666">Activity log</span>
+  <span style="font-size:10px;color:#ff4444" id="violation-count"></span>
+</div>
 <div class="log-area" id="log"></div>
 
 <div class="chaos-section">
@@ -221,6 +225,7 @@ let shownIncidents = new Set();
 let lastData = null;
 let callHistory = [];
 let lastCallCount = 0;
+let lastLoggedIntent = '';
 
 function banAgent(agentName, reason) {
   if (bannedAgents.has(agentName)) return;
@@ -594,7 +599,9 @@ async function poll(){
     document.getElementById('tools-list').innerHTML = phaseHtml + pillsHtml + confHtml;
 
     // ── Intent log entry (blue) ───────────────────────────────────
-    if (activeIntentName && activePhase && activePhase !== 'none') {
+    const intentKey = activePhase + activeIntentName + (conf ? conf.toFixed(2) : '0');
+    if (activeIntentName && activePhase && activePhase !== 'none' && intentKey !== lastLoggedIntent) {
+      lastLoggedIntent = intentKey;
       addLog(ts(), '[INTENT] ' + activePhase + ' → ' + activeIntentName +
         ' (conf: ' + conf.toFixed(2) + ')', 'log-intent');
     }
@@ -669,6 +676,11 @@ async function poll(){
         }
       });
     }
+
+    const violations = document.querySelectorAll('.log-block').length;
+    const vc = document.getElementById('violation-count');
+    if (vc && violations > 0)
+      vc.textContent = violations + ' violations detected';
 
   } catch(e) {
     if (e.name === 'AbortError') return;

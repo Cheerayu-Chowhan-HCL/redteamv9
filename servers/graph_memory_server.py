@@ -321,6 +321,7 @@ async def intent_status(limit: int = 25):
         # Per-session recent incidents and call rate for dashboard
         recent_incidents = []
         calls_last_60s = 0
+        total_incidents = 0
         if _latest_sid:
             try:
                 with _get_conn() as conn:
@@ -345,6 +346,10 @@ async def intent_status(limit: int = 25):
                         """SELECT COUNT(*) FROM tool_audit_log
                            WHERE session_id=?
                            AND timestamp >= datetime('now', '-60 seconds')""",
+                        (_latest_sid,)
+                    ).fetchone()[0]
+                    total_incidents = conn.execute(
+                        "SELECT COUNT(*) FROM agent_intent_log WHERE session_id=?",
                         (_latest_sid,)
                     ).fetchone()[0]
             except Exception:
@@ -392,7 +397,7 @@ async def intent_status(limit: int = 25):
             "session_id": _latest_sid,
             "divergence_score": divergence_score,
             "total_tool_calls": total_calls,
-            "total_incidents": len(incidents),
+            "total_incidents": total_incidents,
             "calls_last_60s": calls_last_60s,
             "recent_incidents": recent_incidents,
             "active_sessions": active_sessions[:5],
