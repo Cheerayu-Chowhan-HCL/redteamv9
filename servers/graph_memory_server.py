@@ -133,7 +133,7 @@ class ChaosInject(BaseModel):
 # ─── Endpoints ─────────────────────────────────────────────────────────────
 
 @app.get("/health")
-def health():
+async def health():
     sessions = engine.get_all_sessions()
     return {"status": "ok", "service": "redteam-v9", "sessions": len(sessions)}
 
@@ -174,7 +174,7 @@ def _parse_tools(value: str) -> list[str]:
     return []
 
 @app.get("/intent_status")
-def intent_status(limit: int = 25):
+async def intent_status(limit: int = 25):
     """Read-only SICD dashboard state. Sanitised; no raw payload/evidence fields."""
     limit = max(1, min(limit, 100))
     try:
@@ -269,14 +269,15 @@ def intent_status(limit: int = 25):
         # Use trained SICD model if available; fall back to heuristic
         _latest_sid = (active_sessions[0]["session_id"]
                        if active_sessions else None)
-        import time as _time
+        import time as _time, asyncio as _asyncio
         _now = _time.time()
         if (_latest_sid and
                 (_latest_sid != _sicd_cache["session"] or
-                 _now - _sicd_cache["ts"] > 10)):
+                 _now - _sicd_cache["ts"] > 6)):
             try:
                 _ge = engine
-                _fresh = _ge.get_sicd_score(_latest_sid, lookback=30)
+                _fresh = await _asyncio.to_thread(
+                    _ge.get_sicd_score, _latest_sid, 30)
                 _sicd_cache["score"]   = round(_fresh, 3)
                 _sicd_cache["ts"]      = _now
                 _sicd_cache["session"] = _latest_sid
@@ -377,7 +378,7 @@ def intent_status(limit: int = 25):
         raise HTTPException(500, str(e))
 
 @app.get("/report/{session_id}")
-def get_report(session_id: str):
+async def get_report(session_id: str):
     """Download the HTML report for a session."""
     from fastapi.responses import JSONResponse
     reports_dir = _PROJECT_ROOT / "reports"
@@ -419,7 +420,7 @@ async def get_findings(session_id: str):
 
 
 @app.post("/inject_chaos", dependencies=[Depends(require_auth)])
-def inject_chaos(body: ChaosInject, request: Request):
+async def inject_chaos(body: ChaosInject, request: Request):
     """Local-only synthetic SICD anomaly injection for dashboard validation."""
     if not _is_local_request(request):
         raise HTTPException(403, "inject_chaos is local-only")
@@ -547,7 +548,7 @@ async def restore_adk_agents_endpoint():
 
 
 @app.post("/session/create", dependencies=[Depends(require_auth)])
-def create_session(body: SessionCreate):
+async def create_session(body: SessionCreate):
     try:
         node_id = engine.create_session(body.session_id, body.target_url, body.goal)
         return {"success": True, "node_id": node_id, "session_id": body.session_id}
@@ -555,7 +556,7 @@ def create_session(body: SessionCreate):
         raise HTTPException(500, str(e))
 
 @app.post("/causal/set_branch", dependencies=[Depends(require_auth)])
-def set_branch(body: BranchSet):
+async def set_branch(body: BranchSet):
     try:
         node_id = engine.set_branch(body.session_id, body.attack_type, body.description)
         mcts = get_or_create_mcts(body.session_id)
@@ -570,7 +571,7 @@ def set_branch(body: BranchSet):
         raise HTTPException(500, str(e))
 
 @app.post("/causal/add_node", dependencies=[Depends(require_auth)])
-def add_node(body: NodeAdd):
+async def add_node(body: NodeAdd):
     try:
         node_id = engine.add_node(
             body.session_id, body.node_type, body.label,
@@ -581,7 +582,7 @@ def add_node(body: NodeAdd):
         raise HTTPException(500, str(e))
 
 @app.post("/causal/add_edge", dependencies=[Depends(require_auth)])
-def add_edge(body: EdgeAdd):
+async def add_edge(body: EdgeAdd):
     try:
         engine.add_edge(body.session_id, body.source_id, body.target_id, body.label)
         return {"success": True}
@@ -589,7 +590,7 @@ def add_edge(body: EdgeAdd):
         raise HTTPException(500, str(e))
 
 @app.post("/causal/log_reasoning", dependencies=[Depends(require_auth)])
-def log_reasoning(body: ReasoningLog):
+async def log_reasoning(body: ReasoningLog):
     try:
         log_id = engine.log_reasoning(body.session_id, body.agent, body.step, body.content)
         return {"success": True, "log_id": log_id}
@@ -597,7 +598,7 @@ def log_reasoning(body: ReasoningLog):
         raise HTTPException(500, str(e))
 
 @app.post("/causal/add_injection_point", dependencies=[Depends(require_auth)])
-def add_injection_point(body: InjectionPoint):
+async def add_injection_point(body: InjectionPoint):
     try:
         ip_id = engine.add_injection_point(
             body.session_id, body.parameter, body.endpoint, body.method, body.context
@@ -609,7 +610,7 @@ def add_injection_point(body: InjectionPoint):
         raise HTTPException(500, str(e))
 
 @app.post("/causal/add_finding", dependencies=[Depends(require_auth)])
-def add_finding(body: Finding):
+async def add_finding(body: Finding):
     try:
         finding_id = engine.add_finding(
             body.session_id, body.title, body.severity,
@@ -622,7 +623,7 @@ def add_finding(body: Finding):
         raise HTTPException(500, str(e))
 
 @app.post("/causal/distill_knowledge", dependencies=[Depends(require_auth)])
-def distill_knowledge(body: KnowledgeDistill):
+async def distill_knowledge(body: KnowledgeDistill):
     try:
         fact_id = engine.distill_knowledge(body.session_id, body.key_insight)
         return {"success": True, "fact_id": fact_id}
@@ -630,7 +631,7 @@ def distill_knowledge(body: KnowledgeDistill):
         raise HTTPException(500, str(e))
 
 @app.post("/score_branches", dependencies=[Depends(require_auth)])
-def score_branches(body: ScoreBranches):
+async def score_branches(body: ScoreBranches):
     try:
         mcts = get_or_create_mcts(body.session_id)
         ranked = mcts.select(top_k=body.top_k)
@@ -642,7 +643,7 @@ def score_branches(body: ScoreBranches):
         raise HTTPException(500, str(e))
 
 @app.post("/fingerprint_update", dependencies=[Depends(require_auth)])
-def fingerprint_update(body: FingerprintUpdate):
+async def fingerprint_update(body: FingerprintUpdate):
     try:
         engine.set_fingerprint(body.session_id, body.fingerprint)
         mcts = get_or_create_mcts(body.session_id)
@@ -652,7 +653,7 @@ def fingerprint_update(body: FingerprintUpdate):
         raise HTTPException(500, str(e))
 
 @app.get("/causal/graph_summary")
-def graph_summary(session_id: str):
+async def graph_summary(session_id: str):
     try:
         ctx = engine.get_session_context(session_id)
         return {"success": True, "summary": ctx}
@@ -660,7 +661,7 @@ def graph_summary(session_id: str):
         raise HTTPException(500, str(e))
 
 @app.get("/causal/attack_paths")
-def attack_paths(session_id: str, top_n: int = 5):
+async def attack_paths(session_id: str, top_n: int = 5):
     ctx = engine.get_session_context(session_id)
     findings = ctx.get("findings", [])
     injection_points = ctx.get("injection_points", [])
@@ -673,7 +674,7 @@ def attack_paths(session_id: str, top_n: int = 5):
 # DAG endpoints — read-only, NO auth required (sanitised output only)
 
 @app.get("/dag/session_data")
-def dag_session_data(session_id: str):
+async def dag_session_data(session_id: str):
     try:
         data = engine.get_dag_data(session_id)
         return data
@@ -681,23 +682,23 @@ def dag_session_data(session_id: str):
         raise HTTPException(500, str(e))
 
 @app.get("/dag/sessions")
-def dag_sessions():
+async def dag_sessions():
     sessions = engine.get_all_sessions()
     return {"sessions": sessions}
 
 @app.get("/dag/mcts_state")
-def dag_mcts_state(session_id: str):
+async def dag_mcts_state(session_id: str):
     mcts = get_or_create_mcts(session_id)
     return mcts.get_state()
 
 @app.get("/cross_session_insights")
-def cross_session_insights(tech_stack: str = "", attack_type: str = ""):
+async def cross_session_insights(tech_stack: str = "", attack_type: str = ""):
     rows = get_all_insights(tech_stack, attack_type)
     return {"success": True, "insights": rows}
 
 # Alias with /causal/ prefix for consistency
 @app.get("/causal/cross_session_insights")
-def cross_session_insights_causal(tech_stack: str = "", attack_type: str = ""):
+async def cross_session_insights_causal(tech_stack: str = "", attack_type: str = ""):
     rows = get_all_insights(tech_stack, attack_type)
     return {"success": True, "insights": rows}
 
