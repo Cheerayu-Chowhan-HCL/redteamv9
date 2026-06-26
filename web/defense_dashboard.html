@@ -756,7 +756,7 @@ async function chaos(type) {
   };
   const peak = peaks[type] || 0.7;
 
-  escalateThenFire(0.29, peak, () => {
+  escalateThenFire(0.29, peak, async () => {
     if (type === 'scope') {
       banAgent('Planner', 'Declared intent with out-of-scope target');
     } else if (type === 'tool') {
