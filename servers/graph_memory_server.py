@@ -202,11 +202,28 @@ async def intent_status(limit: int = 25):
                             "last_target": last["target_url"],
                             "last_findings": last_findings,
                             "session_id": None,
-                            "message": f"Last: {last['session_id']} ({last_findings} findings)"
+                            "message": f"Last: {last['session_id']} ({last_findings} findings)",
+                            "divergence_score": 0.0,
+                            "total_incidents": 0,
+                            "calls_last_60s": 0,
+                            "active_declared_intents": [],
+                            "adk_cards": {},
+                            "recent_incidents": [],
+                            "agent_cards": {},
                         }
             except Exception:
                 pass
-            return {"status": "no_session", "session_id": None}
+            return {
+                "status": "no_session",
+                "session_id": None,
+                "divergence_score": 0.0,
+                "total_incidents": 0,
+                "calls_last_60s": 0,
+                "active_declared_intents": [],
+                "adk_cards": {},
+                "recent_incidents": [],
+                "agent_cards": {},
+            }
 
         active_intents = _rows(
             """SELECT id, phase, intent, confidence, tools_authorised, scope
@@ -336,27 +353,37 @@ async def intent_status(limit: int = 25):
         # ADK agent card status
         adk_cards = {}
         try:
-            from core.opena2a import ADK_AGENTS, _load_card
-            for name in ADK_AGENTS:
-                card = _load_card(name)
-                signed = False
-                if card is not None:
-                    import hmac as _hmac, hashlib as _hs
-                    from core.opena2a import SIGNING_KEY
-                    expected = _hmac.new(SIGNING_KEY,
-                                        card["payload"].encode(),
-                                        _hs.sha256).hexdigest()
-                    signed = _hmac.compare_digest(
-                        card.get("signature", ""), expected)
-                adk_cards[name] = {
-                    "signed": signed,
-                    "name": name,
-                    "role": ADK_AGENTS[name]["role"],
-                    "framework": "google_adk",
-                    "model": ADK_AGENTS[name]["model"],
-                }
-        except Exception:
-            pass
+            import sys as _sys
+            _sys.path.insert(0, str(_PROJECT_ROOT))
+            from core.opena2a import ADK_AGENTS, _load_card, SIGNING_KEY
+            import hmac as _hmac, hashlib as _hs
+            for name in list(ADK_AGENTS.keys()):
+                try:
+                    card = _load_card(name)
+                    signed = False
+                    if card is not None:
+                        expected = _hmac.new(SIGNING_KEY,
+                                             card["payload"].encode(),
+                                             _hs.sha256).hexdigest()
+                        signed = _hmac.compare_digest(
+                            card.get("signature", ""), expected)
+                    adk_cards[name] = {
+                        "signed": signed,
+                        "name": name,
+                        "role": ADK_AGENTS[name].get("role", ""),
+                        "framework": "secure-agent",
+                        "model": "v9-model",
+                    }
+                except Exception:
+                    adk_cards[name] = {
+                        "signed": False,
+                        "name": name,
+                        "role": "",
+                        "framework": "secure-agent",
+                        "model": "v9-model",
+                    }
+        except Exception as _e:
+            pass  # adk_cards stays empty dict — safe
 
         return {
             "service": "redteam-v9-sicd",
