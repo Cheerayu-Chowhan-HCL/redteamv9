@@ -212,7 +212,7 @@ body{font-family:system-ui,sans-serif;background:#0a0a0f;color:#e2e2e8;min-heigh
 </div>
 
 <script>
-const API = 'http://localhost:6037';
+const API = 'http://127.0.0.1:6037';
 let currentSession = null;
 let logLines = [];
 let sessionBlocked = false;
@@ -410,7 +410,7 @@ async function resetBlocker() {
   unbanAll();
   await resetChaos();
   try {
-    await fetch('http://localhost:6037/restore_adk_agents', {method: 'POST'});
+    await fetch('http://127.0.0.1:6037/restore_adk_agents', {method: 'POST'});
     addLog(ts(), 'ADK agent identities restored', 'log-ok');
   } catch(e) {}
 }
@@ -463,7 +463,10 @@ function ts(){
 
 async function poll(){
   try {
-    const r = await fetch(`${API}/intent_status`);
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 3000);
+    const r = await fetch(`${API}/intent_status`, {signal: ctrl.signal});
+    clearTimeout(tid);
     const d = await r.json();
     lastData = d;
     if (d.status === 'no_active_session') {
@@ -668,6 +671,8 @@ async function poll(){
     }
 
   } catch(e) {
+    if (e.name === 'AbortError') return;
+    console.warn('poll error:', e);
     document.getElementById('session-tag').textContent = 'server offline';
     document.getElementById('live-dot').style.background = '#ff4444';
   }
@@ -734,7 +739,7 @@ async function chaos(type) {
   addLog(ts(), 'CHAOS INJECT · type:' + type + ' · session:' + session, 'log-warn');
 
   try {
-    await fetch('http://localhost:6037/inject_chaos', {
+    await fetch('http://127.0.0.1:6037/inject_chaos', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({chaos_type: type, session_id: session})
@@ -762,7 +767,7 @@ async function chaos(type) {
         ' — rate anomaly session terminated by SICD');
       setTimeout(async () => {
         try {
-          await fetch('http://localhost:6037/emergency_disconnect',
+          await fetch('http://127.0.0.1:6037/emergency_disconnect',
             {method: 'POST'});
         } catch(e) {}
       }, 2000);
@@ -773,7 +778,7 @@ async function chaos(type) {
       document.getElementById('exec-status').className = 'rejected';
       banAgent('Executor', 'Unsigned agent card detected');
       try {
-        await fetch('http://localhost:6037/revoke_adk_agent/adk_executor',
+        await fetch('http://127.0.0.1:6037/revoke_adk_agent/adk_executor',
           {method: 'POST'});
         addLog(ts(), 'ADK Executor identity revoked in OpenA2A', 'log-block');
       } catch(e) {}
@@ -785,13 +790,13 @@ async function resetChaos(){
   unbanAll();
   addLog(ts(), 'RESET · all violations cleared', 'log-ok');
   try {
-    await fetch('http://localhost:6037/restore_adk_agents', {method: 'POST'});
+    await fetch('http://127.0.0.1:6037/restore_adk_agents', {method: 'POST'});
     addLog(ts(), 'ADK agent identities restored', 'log-ok');
   } catch(e) {}
 }
 
 function restoreMCP() {
-  fetch('http://localhost:6037/restore_mcp', {method:'POST'})
+  fetch('http://127.0.0.1:6037/restore_mcp', {method:'POST'})
     .then(() => {
       addLog(ts(), 'RESTORE MCP · restarting server...', 'log-ok');
       document.getElementById('session-tag').textContent =

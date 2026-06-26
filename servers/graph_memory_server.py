@@ -207,40 +207,23 @@ def intent_status(limit: int = 25):
             return {"status": "no_session", "session_id": None}
 
         active_intents = _rows(
-            """SELECT id, session_id, phase, intent, confidence, tools_authorised,
-                      scope, rationale, created_at, active
+            """SELECT id, phase, intent, confidence, tools_authorised, scope
                FROM declare_intents
                WHERE active=1
-               ORDER BY created_at DESC"""
+               ORDER BY created_at DESC
+               LIMIT 3"""
         )
         for item in active_intents:
             item["tools_authorised"] = _parse_tools(item.get("tools_authorised", "[]"))
-            item["rationale"] = _safe_text(item.get("rationale"), 160)
 
         incidents = _rows(
-            """SELECT id, timestamp, session_id, session_phase, agent_type, tool_name,
-                      parameters_summary, planner_intent, declared_intent_id,
-                      mast_classification, response_taken, severity
+            """SELECT mast_classification, severity, tool_name,
+                      datetime(timestamp) as timestamp
                FROM agent_intent_log
                WHERE mast_classification IS NOT NULL AND mast_classification != ''
                ORDER BY timestamp DESC
-               LIMIT ?""",
-            (limit,)
+               LIMIT 5"""
         )
-        for item in incidents:
-            item["parameters_summary"] = _safe_text(item.get("parameters_summary"), 180)
-
-        audit_events = _rows(
-            """SELECT id, timestamp, session_id, tool_name, parameters_summary,
-                      result_summary, session_phase, planner_intent
-               FROM tool_audit_log
-               ORDER BY timestamp DESC
-               LIMIT ?""",
-            (limit,)
-        )
-        for item in audit_events:
-            item["parameters_summary"] = _safe_text(item.get("parameters_summary"), 180)
-            item["result_summary"] = _safe_text(item.get("result_summary"), 180)
 
         summary = {
             "counts": {
@@ -248,7 +231,6 @@ def intent_status(limit: int = 25):
                 "sessions_active": len(active_sessions),
                 "active_intents": len(active_intents),
                 "recent_incidents": len(incidents),
-                "recent_tool_events": len(audit_events),
             },
             "by_phase": _count_rows(
                 """SELECT COALESCE(phase, session_phase, 'unknown') AS key, COUNT(*) AS count
@@ -373,12 +355,11 @@ def intent_status(limit: int = 25):
             "total_incidents": len(incidents),
             "calls_last_60s": calls_last_60s,
             "recent_incidents": recent_incidents,
-            "active_sessions": active_sessions,
+            "active_sessions": active_sessions[:5],
             "active_declared_intents": active_intents,
             "recent_mast_incidents": incidents,
-            "recent_tool_audit_events": audit_events,
             "adk_cards": adk_cards,
-            "summary": summary,
+            "summary": {"counts": summary["counts"]},
         }
     except Exception as e:
         raise HTTPException(500, str(e))
