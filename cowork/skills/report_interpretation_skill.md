@@ -1,9 +1,10 @@
 ---
-name: RedTeam V9 Report Interpreter
-description: Post-engagement report quality checklist for RedTeam V9. Verifies CVSS coverage, finding completeness, evidence quality, and handles zero-finding edge cases.
+name: Pentest Report Quality
+description: Report verification and quality checklist for penetration test findings. Triggers after generate_report is called. Ensures every finding has CVSS scores, POC commands, and remediation steps before declaring the engagement complete.
+trigger: auto
 ---
 
-# Report Interpretation — RedTeam V9
+# Report Quality Verification — RedTeam V9
 
 After generate_report completes, verify report quality before declaring the engagement done.
 A report with missing CVSS scores, empty sections, or unflagged findings is not complete —
@@ -23,78 +24,87 @@ log_reasoning(session_id, "Orchestrator", "report_generated",
     "action":"running quality checklist"}')
 ```
 
-Report location: `C:\users\chirayu\redteamv9\reports\{session_id}_report.html`
-
 ---
 
 ## Step 2: Quality Checklist
 
-Work through every item. If any item fails, fix it before declaring done.
+Work through every item. Fix any failure before declaring done.
 
-- [ ] **findings_count > 0** — result shows non-zero. If 0, see Step 4.
-- [ ] **Executive Summary populated** — severity stat cards show non-zero counts (not all 0/0/0/0)
+- [ ] **findings_count >= 0** — zero is valid if the target had no vulnerabilities
+- [ ] **Executive Summary populated** — severity stat cards reflect actual findings
 - [ ] **Every finding has a title** — no "[untitled]" or empty title fields
-- [ ] **Every finding has a severity** — Critical / High / Medium / Low / Info (not blank)
-- [ ] **Every finding has an endpoint** — no "[no endpoint]" or empty endpoint fields
-- [ ] **Every finding has a CVSS vector** — no "N/A" or empty CVSS field anywhere
-- [ ] **Evidence summaries present** — not empty, but sanitised (no raw payloads visible)
-- [ ] **POC curl commands show `[PAYLOAD]`** — not real payload strings
-- [ ] **Every finding has specific remediation** — actionable, not generic ("sanitise user input")
-- [ ] **MCTS Confidence History chart present** — shows confidence evolution during engagement
-- [ ] **Remediation Roadmap present** — ordered by priority with effort estimates
+- [ ] **Every finding has a severity** — Critical / High / Medium / Low / Info
+- [ ] **Every finding has an endpoint** — the actual discovered endpoint, not a placeholder
+- [ ] **Every finding has a CVSS vector** — the full vector string, not just a score or "N/A"
+- [ ] **Evidence summaries present** — tool output summary, sanitised (no raw payloads)
+- [ ] **POC curl commands show `[PAYLOAD]`** — not actual injection strings
+- [ ] **Every finding has specific remediation** — names the exact endpoint and fix required
+- [ ] **MCTS Confidence History chart present** — shows confidence evolution
+- [ ] **Remediation Roadmap present** — ordered by CVSS priority with effort estimates
 
 ---
 
 ## Step 3: Fix Missing Fields
 
-**Missing CVSS on a finding:**
+**Missing CVSS:**
 ```python
 add_finding(session_id,
   title="[exact same title as existing finding]",
   severity="[correct severity]",
-  endpoint="[endpoint]",
-  evidence="[summary — no raw payloads]",
-  cvss="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",  # adjust vector to actual finding
-  remediation="[specific, actionable fix]")
-# Then regenerate:
-generate_report(session_id)
+  endpoint="[the discovered endpoint]",
+  evidence="[sanitised tool output summary]",
+  cvss="[correct CVSS vector — see table below]",
+  remediation="[specific fix: names the endpoint, the vulnerable component, and the correct mitigation]")
+generate_report(session_id)  # safe to call multiple times — overwrites previous file
 ```
 
-**CVSS vector reference:**
-- Auth bypass, RCE: `AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H` → score 9.8 (Critical)
-- SQLi (auth required): `AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H` → score 8.8 (High)
-- Stored XSS: `AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N` → score 6.1 (Medium)
-- Reflected XSS: `AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N` → score 6.1 (Medium)
-- Missing HSTS: `AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N` → score 4.2 (Medium)
-- Missing HttpOnly: `AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N` → score 5.3 (Medium)
-- IDOR: `AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N` → score 6.5 (Medium)
-- Session fixation: `AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N` → score 7.1 (High)
+**CVSS vector reference by finding type:**
 
-**Generic remediation (must be made specific):**
+| Finding Type | CVSS Vector | Score | Severity |
+|-------------|------------|-------|----------|
+| Auth bypass / RCE (unauthenticated) | `AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H` | 9.8 | Critical |
+| SQLi (authenticated) | `AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H` | 8.8 | High |
+| SQLi (unauthenticated) | `AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H` | 9.8 | Critical |
+| Stored XSS | `AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N` | 6.1 | Medium |
+| Reflected XSS | `AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N` | 6.1 | Medium |
+| IDOR (horizontal) | `AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N` | 6.5 | Medium |
+| CSRF | `AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N` | 4.3 | Medium |
+| Session fixation | `AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N` | 7.1 | High |
+| Missing HSTS | `AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N` | 4.2 | Medium |
+| Missing CSP | `AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N` | 6.1 | Medium |
+| Missing HttpOnly flag | `AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N` | 5.3 | Medium |
+| Info disclosure | `AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N` | 5.3 | Medium |
+
+**Remediation must be specific:**
 ```
-Bad:  "Sanitise all user input"
-Good: "Use parameterised queries (PreparedStatement) for the login handler at
-       /j_spring_security_check. The username and password parameters are currently
-       concatenated into the SQL query string."
+Insufficient: "Sanitise user input"
+Sufficient:   "Replace string concatenation with parameterised queries at the
+               authentication handler [discovered endpoint]. The [discovered parameter]
+               field is directly concatenated into the SQL query string."
 ```
 
-**Low finding count (confirmed vulns during testing but count is wrong):**
-Call `get_session_context(session_id)` and check `confirmed_findings`. If lower than expected,
-call `add_finding` now for each vulnerability confirmed by tool output but not logged.
+**Low finding count — confirm nothing was missed:**
+```python
+get_session_context(session_id)
+# Check: confirmed_findings count vs. add_finding calls made
+# If lower than expected, call add_finding for each tool-confirmed vulnerability not yet logged
+```
 
 ---
 
 ## Step 4: Handle Zero Findings
 
-1. `get_session_context(session_id)` — check if add_finding calls were made during engagement
-2. If findings confirmed in tool output but not logged: call `add_finding` for each, then regenerate
-3. If genuinely no exploitable vulnerabilities found:
+Zero findings after a full 6-phase engagement is a valid result. Verify:
+
+1. `get_session_context(session_id)` — confirm all phases ran and injection points were tested
+2. If findings were confirmed by tool output but not logged: call `add_finding` now, regenerate
+3. If genuinely no vulnerabilities found:
    ```python
    add_finding(session_id,
      title="Assessment Complete — No Exploitable Vulnerabilities Confirmed",
      severity="info",
      endpoint=target_url,
-     evidence="Full 6-phase assessment completed. No exploitable vulnerabilities confirmed by tool results.",
+     evidence="Full 6-phase assessment completed. All discovered parameters tested. No exploitable vulnerabilities confirmed by tool results.",
      cvss="",
      remediation="Continue regular security testing cadence.")
    generate_report(session_id)
@@ -104,45 +114,45 @@ call `add_finding` now for each vulnerability confirmed by tool output but not l
 
 ## CVSS 3.1 Severity Reference
 
-| Score | Severity | Typical Examples |
-|-------|----------|-----------------|
-| 9.0–10.0 | **Critical** | RCE, full auth bypass, unauthenticated DB dump |
-| 7.0–8.9 | **High** | SQL injection, stored XSS, IDOR with PII |
-| 4.0–6.9 | **Medium** | Reflected XSS, CSRF, missing HSTS |
-| 0.1–3.9 | **Low** | Missing cookie flags, info disclosure |
-| 0.0 | **Info** | No direct security impact |
+| Score | Severity | Description |
+|-------|----------|-------------|
+| 9.0–10.0 | **Critical** | Unauthenticated RCE, full auth bypass, unauthenticated data dump |
+| 7.0–8.9 | **High** | Authenticated SQLi, stored XSS, session fixation with full account takeover |
+| 4.0–6.9 | **Medium** | Reflected XSS, CSRF, IDOR, missing HSTS, weak session tokens |
+| 0.1–3.9 | **Low** | Missing cookie flags, verbose error messages, minor info disclosure |
+| 0.0 | **Info** | No direct security impact — observation only |
 
 ---
 
 ## Critical Finding Protocol (CVSS >= 9.0)
 
-For any finding with CVSS >= 9.0, verify before calling generate_report:
+Before calling generate_report, verify each Critical finding has:
 
-1. Finding is logged with full CVSS vector string (not just a number)
-2. Evidence field contains sanitised tool output confirming exploitation
-3. Remediation is specific and actionable (not generic)
-4. Log the critical confirmation:
+1. Full CVSS vector string (not just a number)
+2. Evidence field with sanitised tool output confirming exploitation
+3. Specific remediation naming the exact endpoint and required fix
+4. Log the confirmation:
 ```python
 log_reasoning(session_id, "Orchestrator", "critical_confirmed",
   '{"type":"observation","finding":"[title]","cvss":[score],
-    "note":"critical finding documented in report with full CVSS vector"}')
+    "note":"critical finding documented with full CVSS vector and specific remediation"}')
 ```
 
 ---
 
 ## Regeneration
 
-Call `generate_report(session_id)` as many times as needed — it overwrites the previous file
-and re-reads all findings from the database. There is no penalty for multiple calls.
-Always call it one final time after all add_finding fixes are complete.
+Call `generate_report(session_id)` as many times as needed. Each call overwrites the
+previous file and re-reads all findings from the database. Always call once more after
+completing all add_finding fixes.
 
 ---
 
-## Security Note on Report Content
+## Report Security Note
 
 The HTML report is sanitised before saving:
 - Evidence fields contain summaries — not raw HTTP request/response bodies
 - POC curl commands show `[PAYLOAD]` — not actual injection strings
-- Cookie values are masked in all output
+- Cookie values are masked
 
-This is intentional. The report is safe to share with developers, management, and stakeholders.
+The report is safe to share with developers, management, and stakeholders.
