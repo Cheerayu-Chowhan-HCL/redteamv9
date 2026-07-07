@@ -128,9 +128,16 @@ found, log the skip and proceed to Phase 3.
 **Goal:** Test any discovered authentication endpoint for bypass and session flaws.
 
 1. `set_branch(session_id, "auth_bypass", "Authentication testing started")`
-2. For each discovered authentication endpoint:
+2. Before calling test_auth_bypass, ALWAYS discover the actual form field names by calling:
+   `http_request(url=login_endpoint, method="GET")`
+   Extract field names from the form_fields returned.
+   Use ONLY the discovered field names — never assume username/password.
+   AltoroJ uses uid/passw. DVWA uses username/password. Other targets may differ. Discover first.
+   If http_request does not return form_fields for the login page, try POSTing with the
+   discovered field names from the HTML summary.
+3. For each discovered authentication endpoint:
    `test_auth_bypass(url, discovered_login_endpoint, discovered_username_field, discovered_password_field, session_id)`
-   Only use field names actually found by crawl_links. Do not guess parameter names.
+   Use the actual field names found by http_request above. Do not guess parameter names.
 3. `analyse_cookies(url, cookies_dict, session_id)` — audit cookies from crawled responses
 4. `test_session_fixation(url, session_id)` — test session token regeneration post-authentication
 
@@ -253,7 +260,7 @@ Absence of findings IS a valid result — document it as clean.
 
 ---
 
-## Tool Quick Reference — All 32
+## Tool Quick Reference — All 36
 
 | # | Tool | Category | Purpose |
 |---|------|----------|---------|
@@ -289,3 +296,7 @@ Absence of findings IS a valid result — document it as clean.
 | 30 | `kill_all_scans` | Execution | Stop all active async scans |
 | 31 | `shell_exec` | Execution | Execute whitelisted shell commands |
 | 32 | `generate_report` | Execution | Generate standalone HTML report |
+| 33 | `select_skills` | Session | SkillDAG adaptive methodology selection |
+| 34 | `declare_intent` | Session | Create authorisation contract for phase |
+| 35 | `get_intent_incidents` | Session | Fetch MAST violation log for session |
+| 36 | `read_skill` | Session | Load full methodology skill file |

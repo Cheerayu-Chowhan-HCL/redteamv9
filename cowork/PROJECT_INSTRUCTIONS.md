@@ -34,7 +34,7 @@ Example for recon phase:
     phase="recon_phase",
     intent="recon",
     confidence=0.9,
-    tools_authorised="crawl_links,enumerate_endpoints,check_headers,http_request,add_injection_point,log_reasoning,distill_knowledge",
+    tools_authorised="crawl_links,enumerate_endpoints,check_headers,http_request,add_injection_point,log_reasoning,distill_knowledge,fingerprint_target,set_branch,score_branches,get_session_context,get_intent_incidents",
     scope="v9_altoroj_001",
     rationale="Initial recon phase, discovering attack surface"
   )
@@ -45,7 +45,7 @@ Example for SQLi phase:
     phase="sqli_phase",
     intent="sqli",
     confidence=0.82,
-    tools_authorised="test_sqli,check_sqli_status,get_sqli_results,add_finding,log_reasoning,distill_knowledge",
+    tools_authorised="test_sqli,check_sqli_status,get_sqli_results,add_finding,log_reasoning,distill_knowledge,set_branch,score_branches,get_session_context,get_intent_incidents",
     scope="v9_altoroj_001",
     rationale="PHP stack detected, login form found, sqli prior 0.6"
   )
@@ -56,7 +56,7 @@ Example for auth_bypass phase:
     phase="auth_phase",
     intent="auth_bypass",
     confidence=0.75,
-    tools_authorised="test_auth_bypass,test_session_fixation,analyse_cookies,add_finding,log_reasoning,distill_knowledge",
+    tools_authorised="test_auth_bypass,test_session_fixation,analyse_cookies,add_finding,log_reasoning,distill_knowledge,set_branch,score_branches,get_session_context,get_intent_incidents",
     scope="v9_altoroj_001",
     rationale="Login endpoint confirmed, auth_bypass prior elevated"
   )
@@ -67,7 +67,7 @@ Example for XSS phase:
     phase="xss_phase",
     intent="xss",
     confidence=0.78,
-    tools_authorised="test_xss,verify_xss_browser,add_finding,log_reasoning,distill_knowledge",
+    tools_authorised="test_xss,verify_xss_browser,add_finding,log_reasoning,distill_knowledge,set_branch,score_branches,get_session_context,get_intent_incidents",
     scope="v9_altoroj_001",
     rationale="Reflected input found in recon, XSS prior elevated"
   )
@@ -78,7 +78,7 @@ Example for IDOR/CSRF phase:
     phase="access_control_phase",
     intent="idor",
     confidence=0.65,
-    tools_authorised="test_idor,test_csrf,add_finding,log_reasoning,distill_knowledge",
+    tools_authorised="test_idor,test_csrf,add_finding,log_reasoning,distill_knowledge,set_branch,score_branches,get_session_context,get_intent_incidents",
     scope="v9_altoroj_001",
     rationale="ID-bearing endpoints found, access control not verified"
   )
@@ -89,7 +89,7 @@ Example for config phase:
     phase="config_phase",
     intent="config_review",
     confidence=0.85,
-    tools_authorised="check_headers,analyse_cookies,run_nuclei_scan,check_nuclei_status,kill_all_scans,add_finding,log_reasoning,distill_knowledge",
+    tools_authorised="check_headers,analyse_cookies,run_nuclei_scan,check_nuclei_status,kill_all_scans,add_finding,log_reasoning,distill_knowledge,set_branch,score_branches,get_session_context,get_intent_incidents",
     scope="v9_altoroj_001",
     rationale="Headers missing, running nuclei for CVE/misconfig scan"
   )
@@ -130,6 +130,58 @@ Every 5 tool calls:
 - Run generate_report() only when all 6 phases complete
 - If no findings in a phase — log it and move to next phase
 - Absence of findings is a valid result — do not fabricate
+
+## Login form field discovery — mandatory before auth testing
+- Before calling test_auth_bypass, ALWAYS call http_request on the login endpoint (GET)
+  to discover the actual form field names from form_fields returned
+- Use ONLY discovered field names — never assume username/password
+  AltoroJ uses uid/passw; DVWA uses username/password; other targets may differ
+- If http_request does not return form_fields, extract field names from the HTML summary
+
+## Swagger and API discovery — mandatory when found
+- If enumerate_endpoints or crawl_links finds /swagger,
+  /swagger-ui, /api-docs, /openapi.json, or similar:
+  ALWAYS call http_request on those endpoints to read
+  the API specification
+- Extract every endpoint, method, and parameter from
+  the spec and register each as an injection_point
+- Test each discovered API endpoint exactly as you
+  would a web form — same phases, same tools
+- Never skip API surface — it is often less protected
+  than the web UI
+- This is black-box testing — no prior knowledge assumed.
+  The swagger spec IS discovered evidence, not prior
+  knowledge. Using it is correct methodology.
+
+## XSS confirmation — mandatory
+- When test_xss returns result=reflected, ALWAYS
+  call verify_xss_browser immediately with the same
+  url and session_id
+- If verify_xss_browser returns confirmed=false:
+  call http_request on the endpoint manually with
+  payload ?query=<script>alert(1)</script> and check
+  if the payload appears unencoded in the response
+  summary — if yes, log as HIGH confirmed XSS
+- Never rely on test_xss alone as proof of XSS
+
+## RAG unavailability — do not block on it
+- If retrieve_knowledge times out or returns 0 results:
+  log it as a failure node and continue immediately
+- Do NOT retry more than once — RAG is optional context
+- Proceed with standard tool defaults when RAG is down
+- Log: {"type":"failure","tool":"retrieve_knowledge",
+  "result":"RAG unavailable","action":"proceeding with defaults"}
+
+## Nuclei scan stuck handling
+- Poll check_nuclei_status maximum 6 times with
+  10 second waits between polls
+- If still running after 6 polls: call kill_all_scans
+  immediately and proceed — log as failure
+- Never wait indefinitely for nuclei
+- After killing: call http_request on any 302-redirect
+  endpoints found during enumeration (/admin, /swagger)
+  to manually check what they redirect to — this
+  partially compensates for the killed scan
 
 ## New tools in V9 (36 total)
 - select_skills: SkillDAG adaptive methodology selection
