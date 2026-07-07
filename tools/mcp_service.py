@@ -1836,9 +1836,8 @@ def run_nuclei_scan(target_url: str, templates: str = "misconfigurations",
         "-tags", tags_arg,
         "-duc",          # disable update check — prevents internet blocking
         "-silent",
-        "-j",            # JSON lines output
         "-timeout", "10",
-        "-o", out_file,
+        "-jle", out_file,  # jsonl-export writes JSONL directly to file (v3.8+)
     ]
 
     # Route through mitmproxy for external targets
