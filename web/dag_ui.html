@@ -150,7 +150,7 @@ html, body { height: 100%; overflow: hidden; font-family: 'Inter', 'Segoe UI', A
 }
 .sev-critical { background: #da3633; }
 .sev-high { background: #f85149; }
-.sev-medium { background: #d29922; }
+.sev-medium { background: #D97706; }
 .sev-low { background: #388bfd; }
 .sev-info { background: #238636; }
 
@@ -216,7 +216,7 @@ html, body { height: 100%; overflow: hidden; font-family: 'Inter', 'Segoe UI', A
   <!-- LEFT SIDEBAR -->
   <div id="sidebar">
     <div id="sidebar-header">Sessions</div>
-    <div id="session-list"><div style="padding:10px;color:#484f58;font-size:0.8em">Loading…</div></div>
+    <div id="session-list"><div style="padding:10px;color:#94A3B8;font-size:0.8em">Loading…</div></div>
   </div>
 
   <!-- CENTER -->
@@ -243,9 +243,9 @@ html, body { height: 100%; overflow: hidden; font-family: 'Inter', 'Segoe UI', A
       <button class="rp-tab" onclick="switchTab('mcts',this)">MCTS</button>
     </div>
     <div id="rp-content">
-      <div id="tab-log"><p style="color:#484f58;font-size:0.82em">No session selected.</p></div>
-      <div id="tab-vulns" style="display:none"><p style="color:#484f58;font-size:0.82em">No findings yet.</p></div>
-      <div id="tab-mcts" style="display:none"><p style="color:#484f58;font-size:0.82em">No MCTS data.</p></div>
+      <div id="tab-log"><p style="color:#94A3B8;font-size:0.82em">No session selected.</p></div>
+      <div id="tab-vulns" style="display:none"><p style="color:#94A3B8;font-size:0.82em">No findings yet.</p></div>
+      <div id="tab-mcts" style="display:none"><p style="color:#94A3B8;font-size:0.82em">No MCTS data.</p></div>
     </div>
   </div>
 
@@ -254,7 +254,7 @@ html, body { height: 100%; overflow: hidden; font-family: 'Inter', 'Segoe UI', A
 <!-- BOTTOM BAR -->
 <div id="bottombar">
   <span id="bottombar-label">Confirmed findings:</span>
-  <div id="chips-container"><span style="color:#484f58;font-size:0.8em">None</span></div>
+  <div id="chips-container"><span style="color:#94A3B8;font-size:0.8em">None</span></div>
 </div>
 
 <script>
@@ -321,9 +321,9 @@ function _ensureTooltip() {
   _tooltipEl = document.createElement('div');
   _tooltipEl.style.cssText =
     'position:fixed;z-index:9999;pointer-events:none;opacity:0;' +
-    'transition:opacity 0.15s;background:#FFFFFF;border:1px solid #E2E8F0;' +
+    'transition:opacity 0.15s;background:#FFFFFF;border:1px solid #E2E8F0;box-shadow:0 4px 16px rgba(0,0,0,.1);' +
     'padding:10px 12px;border-radius:8px;font-size:12px;' +
-    'max-width:240px;color:#e6edf3;line-height:1.5;';
+    'max-width:240px;color:#1E293B;line-height:1.5;';
   document.body.appendChild(_tooltipEl);
   return _tooltipEl;
 }
@@ -338,21 +338,21 @@ function _buildTooltipContent(d) {
     h += `<div>Target: ${(d.description || d.label || '').substring(0, 80)}</div>`;
   } else if (t === 'AttackBranch') {
     h += `<div>Phase: <b>${(d.label || '').toUpperCase()}</b></div>`;
-    if (d.description) h += `<div style="color:#8b949e;margin-top:3px">${d.description.substring(0, 80)}</div>`;
+    if (d.description) h += `<div style="color:#64748B;margin-top:3px">${d.description.substring(0, 80)}</div>`;
   } else if (t === 'ConfirmedVulnerability') {
     h += `<div style="color:${sc};font-weight:bold">${sev.toUpperCase()}</div>`;
     h += `<div style="margin:4px 0">${(d.label || '').substring(0, 60)}</div>`;
-    if (d.description) h += `<div style="color:#8b949e;font-size:11px">${d.description.substring(0, 100)}</div>`;
+    if (d.description) h += `<div style="color:#64748B;font-size:11px">${d.description.substring(0, 100)}</div>`;
   } else if (t === 'InjectionPoint') {
     const param = (d.label || '').replace('Injectable: ', '');
     h += `<div>Param: <code style="color:#d29922">${param}</code></div>`;
-    if (d.description) h += `<div style="color:#8b949e;font-size:11px;margin-top:3px">${d.description.substring(0, 80)}</div>`;
+    if (d.description) h += `<div style="color:#64748B;font-size:11px;margin-top:3px">${d.description.substring(0, 80)}</div>`;
   } else {
     h += `<div>${(d.label || '').substring(0, 60)}</div>`;
-    if (d.description) h += `<div style="color:#8b949e;font-size:11px;margin-top:3px">${d.description.substring(0, 80)}</div>`;
+    if (d.description) h += `<div style="color:#64748B;font-size:11px;margin-top:3px">${d.description.substring(0, 80)}</div>`;
   }
   if (d.confidence !== undefined) {
-    h += `<div style="color:#8b949e;font-size:11px;margin-top:4px">Confidence: ${(d.confidence * 100).toFixed(0)}%</div>`;
+    h += `<div style="color:#64748B;font-size:11px;margin-top:4px">Confidence: ${(d.confidence * 100).toFixed(0)}%</div>`;
   }
   return h;
 }
@@ -395,7 +395,7 @@ function _edgeStroke(e, nodeMap) {
     return SEV_COLORS[sev] || '#da3633';
   }
   if (lbl === 'HAS_BRANCH') return '#CBD5E1';
-  return '#E2E8F0';
+  return '#94A3B8';
 }
 
 function hoverNode(event, d) {
@@ -532,7 +532,7 @@ function renderGraph(data) {
       enter => enter.append('line')
         .attr('class', 'edge')
         .attr('stroke', d => _edgeStroke(d, nodeMap))
-        .attr('stroke-width', d => d.type === 'HAS_FINDING' ? 2 : 1)
+        .attr('stroke-width', d => d.type === 'HAS_FINDING' ? 2.5 : 1.5)
         .attr('stroke-dasharray', d =>
           (d.type === 'HAS_BRANCH' || d.type === 'HAS_ATTEMPT' || d.type === 'HAS_FINDING')
             ? 'none' : '4,4')
@@ -589,9 +589,9 @@ function renderGraph(data) {
         grp.append('text')
           .attr('text-anchor', 'middle')
           .attr('dy', d => nodeRadius(d) + 13)
-          .attr('font-size', d => (d.node_type || d.type) === 'SessionRoot' ? 12 : 9)
-          .attr('fill', '#c9d1d9')
-          .attr('pointer-events', 'none')
+          .attr('font-size', d => (d.node_type || d.type) === 'SessionRoot' ? 13 : 11)
+          .attr('fill', '#374151')
+          .attr('pointer-events', 'none').style('paint-order','stroke').style('stroke','rgba(255,255,255,0.85)').style('stroke-width','3px').style('stroke-linecap','round')
           .text(d => {
             const t   = d.node_type || d.type || '';
             const lbl = d.label || '';
@@ -666,7 +666,7 @@ function renderThinkingFlow(dag) {
   const tNodes = dag.thinking_dag?.nodes || [];
   const flow = document.getElementById('thinking-flow');
   if (!tNodes.length) {
-    flow.innerHTML = '<span style="color:#484f58;font-size:0.78em;padding:6px">No thinking nodes yet.</span>';
+    flow.innerHTML = '<span style="color:#94A3B8;font-size:0.78em;padding:6px">No thinking nodes yet.</span>';
     return;
   }
   flow.innerHTML = tNodes.map((n, i) => {
@@ -713,7 +713,7 @@ function renderAgentLog(dag) {
   }
 
   if (!combined.length) {
-    el.innerHTML = '<p style="color:#484f58;font-size:0.82em">No reasoning entries.</p>';
+    el.innerHTML = '<p style="color:#94A3B8;font-size:0.82em">No reasoning entries.</p>';
     return;
   }
 
@@ -727,11 +727,11 @@ function renderAgentLog(dag) {
         <div class="log-meta">
           <span class="log-type-badge" style="background:${ti.bg}">${ti.label}</span>
           <span class="log-step" style="color:${sevColor}">${sev.toUpperCase()}</span>
-          ${r.attack_type ? `<span style="color:#484f58;font-size:0.82em">${r.attack_type}</span>` : ''}
+          ${r.attack_type ? `<span style="color:#94A3B8;font-size:0.82em">${r.attack_type}</span>` : ''}
         </div>
         <div class="log-text" style="font-weight:500">${r.title.substring(0, 80)}</div>
-        ${r.endpoint ? `<div style="color:#58a6ff;font-size:0.82em;font-family:monospace;margin-top:2px">${r.endpoint.substring(0,60)}</div>` : ''}
-        ${r.cvss ? `<div style="color:#6e40c9;font-size:0.82em;margin-top:1px">CVSS: ${r.cvss}</div>` : ''}
+        ${r.endpoint ? `<div style="color:#2563EB;font-size:0.82em;font-family:monospace;margin-top:2px">${r.endpoint.substring(0,60)}</div>` : ''}
+        ${r.cvss ? `<div style="color:#7C3AED;font-size:0.82em;margin-top:1px">CVSS: ${r.cvss}</div>` : ''}
       </div>`;
     }
     let content = {};
@@ -762,7 +762,7 @@ function renderAgentLog(dag) {
         <span class="log-time">${(r.created_at || '').substring(11,19)}</span>
       </div>
       <div class="log-text">${prefix}${text}</div>
-      ${subtitle ? `<div style="color:#6e7681;font-size:0.85em;margin-top:2px;font-family:monospace">${subtitle}</div>` : ''}
+      ${subtitle ? `<div style="color:#64748B;font-size:0.85em;margin-top:2px;font-family:monospace">${subtitle}</div>` : ''}
       ${confStr ? `<div class="log-conf">${confStr}</div>` : ''}
     </div>`;
   }).join('');
@@ -772,7 +772,7 @@ function renderVulns(dag) {
   const findings = dag.findings || [];
   const el = document.getElementById('tab-vulns');
   if (!findings.length) {
-    el.innerHTML = '<p style="color:#484f58;font-size:0.82em">No confirmed findings.</p>';
+    el.innerHTML = '<p style="color:#94A3B8;font-size:0.82em">No confirmed findings.</p>';
     return;
   }
   const sorted = [...findings].sort((a, b) => {
@@ -787,7 +787,7 @@ function renderVulns(dag) {
         ${(f.title || 'Unknown').substring(0, 55)}
       </div>
       <div class="vuln-meta">
-        ${f.endpoint ? `<code style="color:#58a6ff">${f.endpoint.substring(0,50)}</code><br>` : ''}
+        ${f.endpoint ? `<code style="color:#2563EB">${f.endpoint.substring(0,50)}</code><br>` : ''}
         ${f.cvss ? `CVSS: ${f.cvss}` : ''}
       </div>
     </div>`;
@@ -798,7 +798,7 @@ function renderMCTS(mcts) {
   const el = document.getElementById('tab-mcts');
   const nodes = mcts?.nodes || [];
   if (!nodes.length) {
-    el.innerHTML = '<p style="color:#484f58;font-size:0.82em">No MCTS data.</p>';
+    el.innerHTML = '<p style="color:#94A3B8;font-size:0.82em">No MCTS data.</p>';
     return;
   }
   const sorted = [...nodes].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
@@ -838,7 +838,7 @@ function renderChips(dag) {
   });
   const cont = document.getElementById('chips-container');
   if (!findings.length) {
-    cont.innerHTML = '<span style="color:#484f58;font-size:0.8em">None</span>';
+    cont.innerHTML = '<span style="color:#94A3B8;font-size:0.8em">None</span>';
     return;
   }
   cont.innerHTML = findings.slice(0, 8).map(f => {
@@ -858,7 +858,7 @@ async function loadSessions() {
     // Update sidebar list
     const list = document.getElementById('session-list');
     if (!sessions.length) {
-      list.innerHTML = '<div style="padding:10px;color:#484f58;font-size:0.8em">No sessions yet.</div>';
+      list.innerHTML = '<div style="padding:10px;color:#94A3B8;font-size:0.8em">No sessions yet.</div>';
     } else {
       list.innerHTML = sessions.map(s =>
         `<div class="session-item ${s.session_id === currentSession ? 'active' : ''}"
